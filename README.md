@@ -12,6 +12,8 @@ Current additions:
 - for outlines ending with `/-S` or `/-Z` that can safely add on the S/Z to the end, make a new outline with the S and Z added. Rationale: this reduces strokes and I think it is fine to tack it on to the end if you want to do that.
 - all additions above are only added if it doesn't create a word outline conflict
 
+If we're going to deviate from Lapwing's rules, why even use Lapwing? Well, this way we still get most of the benefits of Lapwing, we are just tweaking the parts that we disagree with. Lapwing's syllabic splitting rules are still more consisten and sensible. This adds a few variations that make Lapwing a little more flexible, but overall keep a fairly logical structure.
+
 Usage: 
 
 ```
