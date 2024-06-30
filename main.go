@@ -89,13 +89,10 @@ func main() {
 					addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
 				}
 			}
-			continue
 		}
 
-		didSuffixReplacement := false
 		for replacedSuffix, replacements := range suffixReplacements {
 			if strings.HasSuffix(key, replacedSuffix) {
-				didSuffixReplacement = true
 				for _, replacement := range replacements {
 					newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
 					addEntryIfNotPresent(key, newKey, value, &originalDictionary, &additionalEntries, logger)
@@ -103,9 +100,7 @@ func main() {
 				break
 			}
 		}
-		if didSuffixReplacement {
-			continue
-		}
+
 		kwrMatch := kwrSuffixEndRegex.FindStringSubmatch(key)
 		if kwrMatch != nil {
 			kwrSuffix := kwrMatch[1]
