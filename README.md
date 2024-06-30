@@ -17,3 +17,5 @@ Usage:
 ```
 $ lapwing_augmentor --lapwing_source <source-dict> --output_target <target-dict>
 ```
+
+To see the current output, have a look at <a href="lapwing-augmentations-current-output.json">the current output</a>.
