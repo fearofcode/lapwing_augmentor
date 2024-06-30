@@ -1,7 +1,7 @@
 # lapwing_augmentor
-Augment the Lapwing dictionary with alternatives for vowels and a few other cases.
+Augment the <a href="https://raw.githubusercontent.com/aerickt/plover-lapwing-aio/main/plover_lapwing/dictionaries/lapwing-base.json">Lapwing dictionary</a> with alternatives for vowels and a few other cases.
 
-Please note that this is an initial experiment and should only be used with caution if you do not mind having potentially invalid strokes in your dictionary.
+Warning: please note that this is an initial experiment and should only be used with caution if you do not mind having potentially invalid strokes in your dictionary.
 
 This has not been thoroughly checked yet.
 
