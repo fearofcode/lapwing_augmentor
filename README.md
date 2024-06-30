@@ -8,7 +8,7 @@ This has not been thoroughly checked yet.
 Current additions:
 
 - for outlines ending with `/KWREU`, add `/KWRAE` and `/KWRAOE` variants. Rationale: `/KWREU` seemed odd and I would have expected it to be `/KWRAOE`. Normally this doesn't conflict except in cases like `trustee` vs. `trusty`. Phoenix theory apparently uses `AE` so I wanted to add that as an option.
-- fold some `/-<letter>/KWREU` outlines into a single stroke: `/-B/KWREU` -> `/PWEU`, `/PWAE`, `/PWAOE`. Rationale: this safely reduces strokes and seems intuitive.
+- fold some `/-<letter>/KWREU` outlines into a single stroke: `/-B/KWREU` -> `/PWEU`, `/PWAE`, `/PWAOE`. Rationale: this safely reduces strokes and seems intuitive. Also, `R/KWREU` gets replaced with `/REU`, `/RAE`, and `/RAOE`. The rationale is that this seems more consistent with the Lapwing splitting rules of having a consonant at the beginning of the stroke, effectively ignoring cases where r is treated by the base dictionary as a vowel. This effectively nullifies https://lapwing.aerick.ca/Chapter-15.html#kwr-with-the--r-key .
 - for outlines ending with `/-S` or `/-Z` that can safely add on the S/Z to the end, make a new outline with the S and Z added. Rationale: this reduces strokes and I think it is fine to tack it on to the end if you want to do that.
 - all additions above are only added if it doesn't create a word outline conflict
 

@@ -55,6 +55,7 @@ func main() {
 	suffixReplacements["/-L/KWREU"] = []string{"/HREU", "/HRAOE", "/HRAE"}
 	suffixReplacements["/-P/KWREU"] = []string{"/PEU", "/PAOE", "/PAE"}
 	suffixReplacements["/-PL/KWREU"] = []string{"/PHREU", "/PHRAOE", "/PHRAE"}
+	suffixReplacements["R/KWREU"] = []string{"/REU", "/RAOE", "/RAE"}
 	vowelDashRegex := regexp.MustCompile(`[AEIOU-]`)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	for key, value := range originalDictionary {
