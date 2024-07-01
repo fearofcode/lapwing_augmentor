@@ -11,6 +11,7 @@ Current additions:
 - fold some `/-<letter>/KWREU` outlines into a single stroke: `/-B/KWREU` -> `/PWEU`, `/PWAE`, `/PWAOE`. Rationale: this safely reduces strokes and seems intuitive. Also, `R/KWREU` gets replaced with `/REU`, `/RAE`, and `/RAOE`. The rationale is that this seems more consistent with the Lapwing splitting rules of having a consonant at the beginning of the stroke, effectively ignoring cases where r is treated by the base dictionary as a vowel. This effectively nullifies https://lapwing.aerick.ca/Chapter-15.html#kwr-with-the--r-key .
 - for outlines ending with `/-S` or `/-Z` that can safely add on the S/Z to the end, make a new outline with the S and Z added. Rationale: this reduces strokes and I think it is fine to tack it on to the end if you want to do that.
 - all additions above are only added if it doesn't create a word outline conflict
+- initial experimentation in generating alternate splits, e.g. finding other valid ways to split words like "distribute". this code adds `"TKEU/STREU/PWAOUT"` to compliment Lapwing's `"TKEUS/TREU/PWAOUT`. this is still in progress and there are probably a lot of invalid strokes.
 
 If we're going to deviate from Lapwing's rules, why even use Lapwing? Well, this way we still get most of the benefits of Lapwing, we are just tweaking the parts that we disagree with. Lapwing's syllabic splitting rules are still more consisten and sensible. This adds a few variations that make Lapwing a little more flexible, but overall keep a fairly logical structure.
 
