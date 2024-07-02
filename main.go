@@ -309,6 +309,40 @@ func countConsonantsAtBeginning(s string) int {
 }
 
 func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
+	stenoLetters := []string{
+		"PW",
+		"KH",
+		"TK",
+		"TP",
+		"TKPW",
+		"EU",
+		"SKWR",
+		"HR",
+		"PH",
+		"TPH",
+		"KW",
+		"SR",
+		"KP",
+		"KWR",
+		"STKPW",
+		// todo we only need to check if these are on RHS
+		"FT",
+		"PL",
+		"BG",
+		"LG",
+		"PB",
+		"PBLG",
+		"FRB",
+		"PBG",
+		"FP",
+		"RB",
+		"FRPB",
+		"GS",
+		"BGS",
+		"PLT",
+		"LT",
+		"BL",
+	}
 	result := [][]string{}
 
 	var generate func(int, []string)
@@ -326,17 +360,17 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		// Apply offset
 		if index < len(current)-1 {
 			// Check if the second element starts with KWR followed by a vowel or PW
-			shouldProcess := !isGlider(current[index+1]) &&
-				// check that we are not disrupting whole letters
-				(abs(index) >= 2 || !strings.HasPrefix(current[index+1], "PW")) &&
-				(abs(index) >= 2 || !strings.HasPrefix(current[index+1], "TH")) &&
-				(abs(index) >= 2 || !strings.HasPrefix(current[index+1], "TP")) &&
-				(abs(index) >= 2 || !strings.HasPrefix(current[index+1], "TK")) &&
-				(abs(index) >= 4 || !strings.HasPrefix(current[index+1], "SKWR"))
+			shouldProcess := !isGlider(current[index+1])
+			offset := offsets[index]
+			for _, letter := range stenoLetters {
+				if !wontDisruptLettersOnEitherStroke(offset, current[index], current[index+1], letter) {
+					shouldProcess = false
+					break
+				}
+			}
 			if shouldProcess {
 				newStrokes := make([]string, len(current))
 				copy(newStrokes, current)
-				offset := offsets[index]
 
 				if offset < 0 {
 					// Move characters from first string to second
@@ -357,6 +391,10 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 
 	generate(0, strokes)
 	return result
+}
+
+func wontDisruptLettersOnEitherStroke(offset int, lhs, rhs, prefix string) bool {
+	return abs(offset) >= len(prefix) || (!strings.HasSuffix(lhs, prefix) && !strings.HasPrefix(rhs, prefix))
 }
 
 func abs(index int) int {
