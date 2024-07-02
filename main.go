@@ -206,7 +206,8 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 			// Check if the second element starts with KWR followed by a vowel or PW
 			shouldProcess := !isGlider(current[index+1]) &&
 				!strings.HasPrefix(current[index+1], "PW") &&
-				!strings.HasPrefix(current[index+1], "TH")
+				!strings.HasPrefix(current[index+1], "TH") &&
+				!strings.HasPrefix(current[index+1], "TP")
 			if shouldProcess {
 				newStrokes := make([]string, len(current))
 				copy(newStrokes, current)
