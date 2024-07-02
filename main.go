@@ -72,9 +72,12 @@ func main() {
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	for key, value := range originalDictionary {
+		if key == "PHO/TKER/KWRAEU/TOR" {
+			fmt.Println("holup")
+		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
-			alternateStrokes := generateAlternateStrokes(strokes)
+			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries)
 			for _, strokeSet := range alternateStrokes {
 				addEntryIfNotPresent(key, strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries, logger)
 			}
@@ -342,7 +345,7 @@ func isVowel(r byte) bool {
 	return strings.ContainsRune(vowels, rune(r))
 }
 
-func generateAlternateStrokes(strokes []string) [][]string {
+func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary *map[string]string, additionalEntries *map[string]string) [][]string {
 	var intervals [][]int
 
 	for i := 0; i <= len(strokes)-2; i++ {
@@ -369,6 +372,15 @@ func generateAlternateStrokes(strokes []string) [][]string {
 					validStrokes = false
 					break
 				}
+			}
+			// TODO do we need to check this for last 2 and rest of strokes, etc?
+			lastStroke := strokeSet[len(strokeSet)-1]
+			// get all but last element of strokeSet
+			suffixStrokes := strokeSet[:len(strokeSet)-1]
+			suffix := strings.Join(suffixStrokes, "/")
+			if (hasKey(suffix, originalDictionary) && hasKey(lastStroke, originalDictionary)) ||
+				(hasKey(suffix, additionalEntries) && hasKey(lastStroke, additionalEntries)) {
+				validStrokes = false
 			}
 			if validStrokes {
 				// filter elements of strokeSet that are empty
@@ -419,6 +431,9 @@ func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[stri
 			if !isValidStenoOrder(stroke) {
 				return false
 			}
+		}
+		if key == "PHO/TKER/KWRAEUT/OR" {
+			fmt.Println("holup")
 		}
 		(*additionalDict)[key] = value
 		return true
