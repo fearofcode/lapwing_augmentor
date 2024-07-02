@@ -111,8 +111,8 @@ func main() {
 				keyVariation := strings.TrimSuffix(key, "/-G") + "G"
 				addEntryIfNotPresent(key, keyVariation, value, &originalDictionary, &additionalEntries, logger)
 				// now see if we can also fold in S/Z
-				// keyStrokes := strings.Split(keyVariation, "/")
-				// generateSZVariationForKey(keyVariation, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
+				keyStrokes := strings.Split(keyVariation, "/")
+				generateSZVariationForKey(keyVariation, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
 			}
 		}
 
