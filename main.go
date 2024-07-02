@@ -299,7 +299,8 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 			shouldProcess := !isGlider(current[index+1]) &&
 				!strings.HasPrefix(current[index+1], "PW") &&
 				!strings.HasPrefix(current[index+1], "TH") &&
-				!strings.HasPrefix(current[index+1], "TP")
+				!strings.HasPrefix(current[index+1], "TP") &&
+				!strings.HasPrefix(current[index+1], "SKWR")
 			if shouldProcess {
 				newStrokes := make([]string, len(current))
 				copy(newStrokes, current)
