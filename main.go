@@ -11,10 +11,6 @@ import (
 )
 
 func main() {
-	alternateStrokes := generateAlternateStrokes([]string{"TKEUS", "TREU", "PWAOUT"})
-	for _, strokeSet := range alternateStrokes {
-		fmt.Println(strokeSet)
-	}
 	logger := log.New(os.Stdout, "LOG: ", log.LstdFlags|log.Lmicroseconds)
 	var (
 		sourceDictPath string
@@ -27,8 +23,6 @@ func main() {
 	if sourceDictPath == "" || targetDictPath == "" {
 		fmt.Println("Usage: lapwing_augmentor --lapwing_source <source-dict> --output_target <target-dict>")
 		os.Exit(1)
-		// sourceDictPath = "/Users/wkh/code/aerick-steno-dictionaries/lapwing-base.json"
-		// targetDictPath = "lapwing-augmentations-current-output.json"
 	}
 
 	logger.Println("Reading in dictionary from ", sourceDictPath)
@@ -54,7 +48,6 @@ func main() {
 	additionalEntries := make(map[string]string)
 	kwrSuffixEndPattern := `^.*/KWR([^/]+)$`
 	kwrSuffixEndRegex := regexp.MustCompile(kwrSuffixEndPattern)
-	// startsWithKwrVowelRegex := regexp.MustCompile(`^KWR[AOEU]`)
 	suffixReplacements := make(map[string][]string)
 	suffixReplacements["/-B/KWREU"] = []string{"/PWEU", "/PWAOE", "/PWAE"}
 	suffixReplacements["/-BL/KWREU"] = []string{"/PWHREU", "/PWHRAOE", "/PWHRAE"}
@@ -211,7 +204,10 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		// Apply offset
 		if index < len(current)-1 {
 			// Check if the second element starts with KWR followed by a vowel or PW
-			if !isGlider(current[index+1]) && !strings.HasPrefix(current[index+1], "PW") {
+			shouldProcess := !isGlider(current[index+1]) &&
+				!strings.HasPrefix(current[index+1], "PW") &&
+				!strings.HasPrefix(current[index+1], "TH")
+			if shouldProcess {
 				newStrokes := make([]string, len(current))
 				copy(newStrokes, current)
 				offset := offsets[index]
@@ -248,7 +244,7 @@ func isGlider(stroke string) bool {
 }
 
 func isVowel(r byte) bool {
-	vowels := "AEIOU"
+	vowels := "AEOU"
 	return strings.ContainsRune(vowels, rune(r))
 }
 
@@ -281,6 +277,8 @@ func generateAlternateStrokes(strokes []string) [][]string {
 				}
 			}
 			if validStrokes {
+				// filter elements of strokeSet that are empty
+				strokeSet = removeEmpty(strokeSet)
 				joinedStrokes := strings.Join(strokeSet, "/")
 				if !uniqueStrokes[joinedStrokes] {
 					alternateStrokes = append(alternateStrokes, strokeSet)
@@ -292,8 +290,17 @@ func generateAlternateStrokes(strokes []string) [][]string {
 	return alternateStrokes
 }
 
+func removeEmpty(strokeSet []string) []string {
+	for i := len(strokeSet) - 1; i >= 0; i-- {
+		if strokeSet[i] == "" {
+			strokeSet = append(strokeSet[:i], strokeSet[i+1:]...)
+		}
+	}
+	return strokeSet
+}
+
 func getPartAfterVowels(input string) string {
-	vowels := "AEIOU-*"
+	vowels := "AEOU-*"
 	lastVowelIndex := -1
 	for i := range input {
 		if strings.ContainsRune(vowels, rune(input[i])) {
@@ -313,6 +320,12 @@ func hasKey(key string, dict *map[string]string) bool {
 
 func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[string]string, additionalDict *map[string]string, logger *log.Logger) {
 	if !hasKey(key, originalDict) && !hasKey(key, additionalDict) {
+		strokes := strings.Split(key, "/")
+		for _, stroke := range strokes {
+			if !isValidStenoOrder(stroke) {
+				return
+			}
+		}
 		(*additionalDict)[key] = value
 	} else {
 		logger.Println("Already has key:", key, "value:", value, "for original key:", originalKey)
@@ -384,7 +397,7 @@ func hasConsecutiveRepeatedLetters(s string) bool {
 }
 
 func isValidStenoOrder(stroke string) bool {
-	if hasConsecutiveRepeatedLetters(stroke) {
+	if hasConsecutiveRepeatedLetters(stroke) || stroke == "-" {
 		return false
 	}
 
