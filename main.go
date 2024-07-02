@@ -72,9 +72,6 @@ func main() {
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	for key, value := range originalDictionary {
-		if key == "PHO/TKER/KWRAEU/TOR" {
-			fmt.Println("holup")
-		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries)
@@ -91,26 +88,35 @@ func main() {
 			}
 		}
 
-		// check if we have an /-S or /-Z
-		if strings.HasSuffix(key, "/-S") || strings.HasSuffix(key, "/-Z") {
-			// check if we can safely add -S or -Z to the previous previousStroke
+		// check if we can safely fold in a /-D to the end
+		if strings.HasSuffix(key, "/-D") {
 			previousStroke := strokes[len(strokes)-2]
 			if vowelDashRegex.MatchString(previousStroke) {
 				previousStroke = getPartAfterVowels(previousStroke)
 			}
-			if strings.HasSuffix(key, "/-S") && !strings.HasSuffix(previousStroke, "S") && !rightHandAfterS.MatchString(previousStroke) {
-				keyVariation1 := strings.TrimSuffix(key, "/-S") + "Z"
-				keyVariation2 := strings.TrimSuffix(key, "/-S") + "S"
-				addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
-				addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
-			}
-			if strings.HasSuffix(key, "/-Z") && !strings.HasSuffix(previousStroke, "Z") {
-				keyVariation1 := strings.TrimSuffix(key, "/-Z") + "Z"
-				keyVariation2 := strings.TrimSuffix(key, "/-Z") + "S"
-				addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
-				addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
+			if !strings.HasSuffix(previousStroke, "D") {
+				keyVariation := strings.TrimSuffix(key, "/-D") + "D"
+				addEntryIfNotPresent(key, keyVariation, value, &originalDictionary, &additionalEntries, logger)
+				// now see if we can also fold in S/Z
+				keyStrokes := strings.Split(keyVariation, "/")
+				generateSZVariationForKey(keyVariation, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
 			}
 		}
+		if strings.HasSuffix(key, "/-G") {
+			previousStroke := strokes[len(strokes)-2]
+			if vowelDashRegex.MatchString(previousStroke) {
+				previousStroke = getPartAfterVowels(previousStroke)
+			}
+			if !strings.HasSuffix(previousStroke, "G") {
+				keyVariation := strings.TrimSuffix(key, "/-G") + "G"
+				addEntryIfNotPresent(key, keyVariation, value, &originalDictionary, &additionalEntries, logger)
+				// now see if we can also fold in S/Z
+				// keyStrokes := strings.Split(keyVariation, "/")
+				// generateSZVariationForKey(keyVariation, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
+			}
+		}
+
+		generateSZVariationForKey(key, strokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
 
 		for replacedSuffix, replacements := range suffixReplacements {
 			if strings.HasSuffix(key, replacedSuffix) {
@@ -169,6 +175,27 @@ func main() {
 		log.Println("Wrote", len(additionalEntries), "additional entries to", targetPath)
 	}
 
+}
+
+func generateSZVariationForKey(key string, strokes []string, vowelDashRegex *regexp.Regexp, rightHandAfterS *regexp.Regexp, value string, originalDictionary map[string]string, additionalEntries map[string]string, logger *log.Logger) {
+	if strings.HasSuffix(key, "/-S") || strings.HasSuffix(key, "/-Z") {
+		previousStroke := strokes[len(strokes)-2]
+		if vowelDashRegex.MatchString(previousStroke) {
+			previousStroke = getPartAfterVowels(previousStroke)
+		}
+		if strings.HasSuffix(key, "/-S") && !strings.HasSuffix(previousStroke, "S") && !rightHandAfterS.MatchString(previousStroke) {
+			keyVariation1 := strings.TrimSuffix(key, "/-S") + "Z"
+			keyVariation2 := strings.TrimSuffix(key, "/-S") + "S"
+			addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
+			addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
+		}
+		if strings.HasSuffix(key, "/-Z") && !strings.HasSuffix(previousStroke, "Z") {
+			keyVariation1 := strings.TrimSuffix(key, "/-Z") + "Z"
+			keyVariation2 := strings.TrimSuffix(key, "/-Z") + "S"
+			addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
+			addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
+		}
+	}
 }
 
 func generateKwrRemovedVariations(key string, strokes []string, originalDictionary *map[string]string) [][]string {
@@ -431,9 +458,6 @@ func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[stri
 			if !isValidStenoOrder(stroke) {
 				return false
 			}
-		}
-		if key == "PHO/TKER/KWRAEUT/OR" {
-			fmt.Println("holup")
 		}
 		(*additionalDict)[key] = value
 		return true
