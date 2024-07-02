@@ -300,7 +300,9 @@ func countConsonantsAtEnd(s string) int {
 func countConsonantsAtBeginning(s string) int {
 	count := 0
 	for i := 0; i < len(s); i++ {
-		if !isConsonant(rune(s[i])) {
+		ch := string(s[i])
+		chIsDash := ch == "-"
+		if !isConsonant(rune(s[i])) && !chIsDash {
 			break
 		}
 		count++
@@ -309,11 +311,13 @@ func countConsonantsAtBeginning(s string) int {
 }
 
 func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
-	stenoLetters := []string{
+	lhsStenoLetters := []string{
+		"KWR",
 		"PW",
 		"KH",
 		"TK",
 		"TP",
+		"TH",
 		"TKPW",
 		"EU",
 		"SKWR",
@@ -325,7 +329,8 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		"KP",
 		"KWR",
 		"STKPW",
-		// todo we only need to check if these are on RHS
+	}
+	rhsStenoLetters := []string{
 		"FT",
 		"PL",
 		"BG",
@@ -342,6 +347,7 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		"PLT",
 		"LT",
 		"BL",
+		"PBS",
 	}
 	result := [][]string{}
 
@@ -362,10 +368,26 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 			// Check if the second element starts with KWR followed by a vowel or PW
 			shouldProcess := !isGlider(current[index+1])
 			offset := offsets[index]
-			for _, letter := range stenoLetters {
-				if !wontDisruptLettersOnEitherStroke(offset, current[index], current[index+1], letter) {
+			for _, letter := range rhsStenoLetters {
+				lhsWord := current[index]
+				prefixLettersBeingMoved := offset < 0
+				movementAmountTooSmall := abs(offset) < len(letter)
+				if prefixLettersBeingMoved && movementAmountTooSmall && strings.HasSuffix(lhsWord, letter) {
 					shouldProcess = false
 					break
+				}
+			}
+			if shouldProcess {
+				for _, letter := range lhsStenoLetters {
+					rhsWord := current[index+1]
+					prefixLettersBeingMoved := offset > 0
+					movementAmountTooSmall := abs(offset) < len(letter) && strings.HasPrefix(rhsWord, letter)
+					dashLetter := "-" + letter
+					movementAmountTooSmallDash := abs(offset) < len(dashLetter) && strings.HasPrefix(rhsWord, dashLetter)
+					if prefixLettersBeingMoved && (movementAmountTooSmall || movementAmountTooSmallDash) {
+						shouldProcess = false
+						break
+					}
 				}
 			}
 			if shouldProcess {
@@ -380,7 +402,12 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 				} else {
 					// Move characters from second string to first
 					moveChars := min(offset, len(newStrokes[index+1]))
-					newStrokes[index] = newStrokes[index] + newStrokes[index+1][:moveChars]
+					rhsChars := newStrokes[index+1][:moveChars]
+					// if we are moving a string like "-PLT", remove the "-" so it can be a valid stroke
+					if strings.HasPrefix(rhsChars, "-") && len(rhsChars) > 1 {
+						rhsChars = strings.TrimPrefix(rhsChars, "-")
+					}
+					newStrokes[index] = newStrokes[index] + rhsChars
 					newStrokes[index+1] = newStrokes[index+1][moveChars:]
 				}
 
@@ -391,10 +418,6 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 
 	generate(0, strokes)
 	return result
-}
-
-func wontDisruptLettersOnEitherStroke(offset int, lhs, rhs, prefix string) bool {
-	return abs(offset) >= len(prefix) || (!strings.HasSuffix(lhs, prefix) && !strings.HasPrefix(rhs, prefix))
 }
 
 func abs(index int) int {
