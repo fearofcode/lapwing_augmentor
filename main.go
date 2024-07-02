@@ -80,7 +80,6 @@ func main() {
 			}
 
 			// look for cases where we can safely remove KWR without creating word boundary errors
-			// TODO also do this on additionalEntries generated below (run this at the end after we get a basic version working)
 			if strings.Contains(key, "/KWR") {
 				variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
 				for _, variation := range variations {
@@ -138,6 +137,17 @@ func main() {
 			}
 		}
 
+	}
+
+	// see if we can generate KWR removed variations on additional entries we just generated
+	for key, value := range additionalEntries {
+		strokes := strings.Split(key, "/")
+		if len(strokes) >= 2 && strings.Contains(key, "/KWR") {
+			variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
+			for _, variation := range variations {
+				addEntryIfNotPresent(key, strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, logger)
+			}
+		}
 	}
 
 	log.Println("Added", len(additionalEntries), "additional entries")
