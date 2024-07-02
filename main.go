@@ -61,6 +61,9 @@ func main() {
 	kwrSuffixEndPattern := `^.*/KWR([^/]+)$`
 	kwrSuffixEndRegex := regexp.MustCompile(kwrSuffixEndPattern)
 	suffixReplacements := make(map[string][]string)
+	suffixReplacements["/TEU"] = []string{"/TAOE", "/TAE"}
+	suffixReplacements["/PHEU"] = []string{"/PHAOE", "/PHAE"}
+	suffixReplacements["/HREU"] = []string{"/HRAOE", "/HRAE"}
 	suffixReplacements["/-B/KWREU"] = []string{"/PWEU", "/PWAOE", "/PWAE"}
 	suffixReplacements["/-BL/KWREU"] = []string{"/PWHREU", "/PWHRAOE", "/PWHRAE"}
 	suffixReplacements["/-FL/KWREU"] = []string{"/TPHREU", "/TPHRAOE", "/TPHRAE"}
@@ -148,18 +151,35 @@ func main() {
 
 	}
 
-	// see if we can generate KWR removed variations on additional entries we just generated
 	for key, value := range additionalEntries {
 		strokes := strings.Split(key, "/")
-		if len(strokes) >= 2 && strings.Contains(key, "/KWR") {
-			variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
-			for _, variation := range variations {
-				addEntryIfNotPresent(key, strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, logger)
+		if len(strokes) >= 2 {
+			// see if we can generate KWR removed variations on additional entries we just generated
+			if strings.Contains(key, "/KWR") {
+
+				variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
+				for _, variation := range variations {
+					addEntryIfNotPresent(key, strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, logger)
+				}
 			}
 		}
 	}
 
-	log.Println("Added", len(additionalEntries), "additional entries")
+	// one last time
+	sizeBefore := len(additionalEntries)
+	for key, value := range additionalEntries {
+		strokes := strings.Split(key, "/")
+		if len(strokes) >= 2 {
+			// now try generating alternate syllabic splits on previously added entries
+			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries)
+			for _, strokeSet := range alternateStrokes {
+				addEntryIfNotPresent(key, strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries, logger)
+			}
+		}
+	}
+	sizeAfter := len(additionalEntries)
+	fmt.Println("Added", sizeAfter-sizeBefore, "additional entries with alternate syllable strokes at the end")
+	log.Println("Added", len(additionalEntries), "additional entries overall")
 
 	// write out additionalEntries to file at targetDictPath
 	contents, err := json.MarshalIndent(additionalEntries, "", "  ")
@@ -532,8 +552,6 @@ func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[stri
 		}
 		(*additionalDict)[key] = value
 		return true
-	} else {
-		logger.Println("Already has key:", key, "value:", value, "for original key:", originalKey)
 	}
 	return false
 }
