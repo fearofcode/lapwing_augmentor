@@ -10,18 +10,30 @@ import (
 	"strings"
 )
 
+type stringList []string
+
+func (s *stringList) String() string {
+	return strings.Join(*s, ", ")
+}
+
+func (s *stringList) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
 func main() {
+
 	logger := log.New(os.Stdout, "LOG: ", log.LstdFlags|log.Lmicroseconds)
 	var (
-		sourceDictPath string
-		targetDictPath string
+		sourceDictPath  string
+		targetDictPaths stringList
 	)
 	flag.StringVar(&sourceDictPath, "lapwing_source", "", "source dictionary path")
-	flag.StringVar(&targetDictPath, "output_target", "", "target dictionary path")
+	flag.Var(&targetDictPaths, "output_target", "target dictionary path(s)")
 	flag.Parse()
 
-	if sourceDictPath == "" || targetDictPath == "" {
-		fmt.Println("Usage: lapwing_augmentor --lapwing_source <source-dict> --output_target <target-dict>")
+	if sourceDictPath == "" || len(targetDictPaths) == 0 {
+		fmt.Println("Usage: lapwing_augmentor --lapwing_source <source-dict> --output_target <target-dict> [--output_target <target-dict2> ...]")
 		os.Exit(1)
 	}
 
@@ -65,6 +77,15 @@ func main() {
 			alternateStrokes := generateAlternateStrokes(strokes)
 			for _, strokeSet := range alternateStrokes {
 				addEntryIfNotPresent(key, strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries, logger)
+			}
+
+			// look for cases where we can safely remove KWR without creating word boundary errors
+			// TODO also do this on additionalEntries generated below (run this at the end after we get a basic version working)
+			if strings.Contains(key, "/KWR") {
+				variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
+				for _, variation := range variations {
+					addEntryIfNotPresent(key, strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, logger)
+				}
 			}
 		}
 
@@ -127,12 +148,73 @@ func main() {
 		fmt.Println("Error marshalling JSON:", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(targetDictPath, contents, 0644); err != nil {
-		fmt.Println("Error writing to target dictionary:", err)
-		os.Exit(1)
+	for _, targetPath := range targetDictPaths {
+		if err := os.WriteFile(targetPath, contents, 0644); err != nil {
+			fmt.Println("Error writing to target dictionary:", err)
+			os.Exit(1)
+		}
+		log.Println("Wrote", len(additionalEntries), "additional entries to", targetPath)
 	}
 
-	log.Println("Wrote", len(additionalEntries), "additional entries to", targetDictPath)
+}
+
+func generateKwrRemovedVariations(key string, strokes []string, originalDictionary *map[string]string) [][]string {
+	// Step 1: Find indexes where strokes[i] starts with "KWR" but is not equal to "KWR"
+	indexes := []int{}
+	for i, stroke := range strokes {
+		if i > 0 && strings.HasPrefix(stroke, "KWR") && stroke != "KWR" {
+			indexes = append(indexes, i)
+		}
+	}
+
+	// Step 2: Generate all combinations of replacing KWR in strokes elements with ""
+	replacementOptions := generateReplacementOptions(indexes)
+	var variations [][]string
+	for _, replacement := range replacementOptions {
+		// Step 3: Apply the replacement options to a copy of strokes
+		newStrokes := make([]string, len(strokes))
+		copy(newStrokes, strokes)
+		for i, shouldReplace := range replacement {
+			if shouldReplace && indexes[i] > 0 {
+				newStrokes[indexes[i]] = strings.TrimPrefix(newStrokes[indexes[i]], "KWR")
+			}
+		}
+
+		// Step 4: Check if the result is distinct and valid
+		if isDistinctAndValid(key, indexes, replacement, newStrokes, originalDictionary) {
+			variations = append(variations, newStrokes)
+		}
+	}
+
+	return variations
+}
+
+func generateReplacementOptions(indexes []int) [][]bool {
+	options := [][]bool{}
+	for i := 0; i < (1 << len(indexes)); i++ {
+		replacement := make([]bool, len(indexes))
+		for j := 0; j < len(indexes); j++ {
+			replacement[j] = (i & (1 << j)) != 0
+		}
+		options = append(options, replacement)
+	}
+	return options
+}
+
+func isDistinctAndValid(key string, indexes []int, replacement []bool, strokes []string, originalDictionary *map[string]string) bool {
+	if strings.Join(strokes, "/") == key {
+		return false
+	}
+
+	for i, index := range indexes {
+		if replacement[i] {
+			joined := strings.Join(strokes[:index], "/")
+			if hasKey(joined, originalDictionary) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func isConsonant(r rune) bool {
@@ -319,18 +401,20 @@ func hasKey(key string, dict *map[string]string) bool {
 	return ok
 }
 
-func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[string]string, additionalDict *map[string]string, logger *log.Logger) {
+func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[string]string, additionalDict *map[string]string, logger *log.Logger) bool {
 	if !hasKey(key, originalDict) && !hasKey(key, additionalDict) {
 		strokes := strings.Split(key, "/")
 		for _, stroke := range strokes {
 			if !isValidStenoOrder(stroke) {
-				return
+				return false
 			}
 		}
 		(*additionalDict)[key] = value
+		return true
 	} else {
 		logger.Println("Already has key:", key, "value:", value, "for original key:", originalKey)
 	}
+	return false
 }
 
 type StenoParts struct {
