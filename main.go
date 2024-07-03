@@ -446,7 +446,8 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 				if offset < 0 {
 					// Move characters from first string to second
 					moveChars := min(-offset, len(newStrokes[index]))
-					newStrokes[index+1] = newStrokes[index][len(newStrokes[index])-moveChars:] + newStrokes[index+1]
+					lhsSuffix := newStrokes[index][len(newStrokes[index])-moveChars:]
+					newStrokes[index+1] = moveLhsSuffixToRhsStroke(newStrokes[index+1], lhsSuffix)
 					newStrokes[index] = newStrokes[index][:len(newStrokes[index])-moveChars]
 				} else {
 					// Move characters from second string to first
@@ -456,7 +457,7 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 					if strings.HasPrefix(rhsChars, "-") && len(rhsChars) > 1 {
 						rhsChars = strings.TrimPrefix(rhsChars, "-")
 					}
-					newStrokes[index] = newStrokes[index] + rhsChars
+					newStrokes[index] = moveRhsPrefixToLhsStroke(newStrokes[index], rhsChars)
 					newStrokes[index+1] = newStrokes[index+1][moveChars:]
 				}
 
@@ -469,6 +470,62 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 	return result
 }
 
+func returnIfContains(list string, char string) string {
+	if strings.Contains(list, char) {
+		return char
+	} else {
+		return ""
+	}
+}
+
+func moveRhsPrefixToLhsStroke(lhs, rhsPrefix string) string {
+	alteredRhsLetters := make(map[string]string)
+	//           left hand    right hand
+	alteredRhsLetters["PH"] = "PL"     // M
+	alteredRhsLetters["TPH"] = "PB"    // N
+	alteredRhsLetters["SR"] = "F"      // V
+	alteredRhsLetters["K"] = "BG"      // K
+	alteredRhsLetters["TH"] = "*T"     // TH
+	alteredRhsLetters["SKWR"] = "PBLG" // J
+	alteredRhsLetters["CH"] = "FP"
+	alteredRhsLetters["SH"] = "RB"
+	if _, ok := alteredRhsLetters[rhsPrefix]; ok {
+		lookup := alteredRhsLetters[rhsPrefix]
+		if strings.HasPrefix(lookup, "*") {
+			lhsParts := separateStrokeParts(lhs)
+			lhsVowels := returnIfContains(lhsParts.Vowels, "A") +
+				returnIfContains(lhsParts.Vowels, "O") +
+				"*" +
+				returnIfContains(lhsParts.Vowels, "E") +
+				returnIfContains(lhsParts.Vowels, "U")
+			return lhsParts.Left + lhsVowels + lhsParts.Right + lookup[1:]
+		} else {
+			return lhs + lookup
+		}
+	}
+	return lhs + rhsPrefix
+}
+
+func moveLhsSuffixToRhsStroke(rhs, lhsPrefix string) string {
+	alteredLhsLetters := make(map[string]string)
+	//           right hand    left hand
+	alteredLhsLetters["PL"] = "PH"  // M
+	alteredLhsLetters["TPH"] = "PB" // N
+	alteredLhsLetters["F"] = "SR"   // V
+	alteredLhsLetters["BG"] = "K"   // K
+	// TODO let's not bother with *T -> TH
+	// alteredLhsLetters["*T"] = "TH"     // TH
+	alteredLhsLetters["PBLG"] = "SKWR" // J
+	alteredLhsLetters["FP"] = "CH"
+	alteredLhsLetters["RB"] = "SH"
+	rhsWithoutDash := strings.TrimPrefix(rhs, "-")
+	if _, ok := alteredLhsLetters[lhsPrefix]; ok {
+		lookup := alteredLhsLetters[lhsPrefix]
+		return lookup + rhsWithoutDash
+	}
+
+	return lhsPrefix + rhsWithoutDash
+}
 func abs(index int) int {
 	if index < 0 {
 		return -index
@@ -519,6 +576,9 @@ func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary 
 					validStrokes = false
 					break
 				}
+			}
+			if !validStrokes {
+				continue
 			}
 			// TODO do we need to check this for last 2 and rest of strokes, etc?
 			lastStroke := strokeSet[len(strokeSet)-1]
