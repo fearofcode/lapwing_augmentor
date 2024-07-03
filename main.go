@@ -1,14 +1,35 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"regexp"
+	"slices"
+	"sort"
 	"strings"
 )
+
+func sortedMapKeys(dict *map[string]string) []string {
+	keys := make([]string, 0, len(*dict))
+	for key := range *dict {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	// sort by length, then lexicographically, so more common words generally come first
+	// and we don't need comprehensive word usage data to sort by commonness
+	slices.SortFunc(keys, func(a, b string) int {
+		if len(a) != len(b) {
+			return cmp.Compare(len(a), len(b))
+		} else {
+			return strings.Compare(a, b)
+		}
+	})
+	return keys
+}
 
 type stringList []string
 
@@ -98,7 +119,9 @@ func main() {
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	originalDictionaryIndex := 0
-	for key, value := range originalDictionary {
+	sortedOriginalDictionaryKeys := sortedMapKeys(&originalDictionary)
+	for _, key := range sortedOriginalDictionaryKeys {
+		value := originalDictionary[key]
 		originalDictionaryIndex++
 		if originalDictionaryIndex%10000 == 0 {
 			logger.Println("Processed", originalDictionaryIndex, "/", len(originalDictionary), "entries")
@@ -164,7 +187,9 @@ func main() {
 	}
 
 	additionalEntryIndex := 0
-	for key, value := range additionalEntries {
+	sortedAdditionalEntryKeys := sortedMapKeys(&additionalEntries)
+	for _, key := range sortedAdditionalEntryKeys {
+		value := additionalEntries[key]
 		additionalEntryIndex++
 		if additionalEntryIndex%10000 == 0 {
 			logger.Println("Processed", additionalEntryIndex, "/", len(additionalEntries), "additional entries (KWR removal)")
@@ -184,7 +209,9 @@ func main() {
 
 	// one last time
 	additionalEntryIndex = 0
-	for key, value := range additionalEntries {
+	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
+	for _, key := range sortedAdditionalEntryKeys {
+		value := additionalEntries[key]
 		additionalEntryIndex++
 		if additionalEntryIndex%1000 == 0 {
 			logger.Println("Processed", additionalEntryIndex, "/", len(additionalEntries), "additional entries (alternate splits)")
@@ -580,14 +607,34 @@ func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary 
 			if !validStrokes {
 				continue
 			}
-			// TODO do we need to check this for last 2 and rest of strokes, etc?
-			lastStroke := strokeSet[len(strokeSet)-1]
-			// get all but last element of strokeSet
-			suffixStrokes := strokeSet[:len(strokeSet)-1]
-			suffix := strings.Join(suffixStrokes, "/")
-			if (hasKey(suffix, originalDictionary) && hasKey(lastStroke, originalDictionary)) ||
-				(hasKey(suffix, additionalEntries) && hasKey(lastStroke, additionalEntries)) {
-				validStrokes = false
+			// check if we have created a multi-stroke ambiguity where e.g.
+			// our outline for a word like "coolant" is ambiguous with "cool ant"
+			// (lapwing has KAO/HRAPBT for that specific word. so KAOHR/APBT is not
+			// a valid alternate split due to the ambiguity issue just mentioned)
+			// but we also want to check that last 2, first n-2, etc strokes are
+			// also not creating outline ambiguities
+			for strokesBack := 1; strokesBack < len(strokeSet); strokesBack++ {
+				splitPoint := len(strokeSet) - strokesBack
+				suffixStrokes := strokeSet[splitPoint:]
+				suffix := strings.Join(suffixStrokes, "/")
+				prefixStrokes := strokeSet[:splitPoint]
+				prefix := strings.Join(prefixStrokes, "/")
+				if hasKey(prefix, originalDictionary) && hasKey(suffix, originalDictionary) {
+					// check if the suffix is listed as a suffix in the dictionary itself
+					// ("{^<whatever>}") or is actually a separate standalone word
+					suffixValue := (*originalDictionary)[suffix]
+					if !strings.HasPrefix(suffixValue, "{^") {
+						validStrokes = false
+					}
+				}
+				if hasKey(prefix, additionalEntries) && hasKey(suffix, additionalEntries) {
+					// check if the suffix is listed as a suffix in the dictionary itself
+					// ("{^<whatever>}") or is actually a separate standalone word
+					suffixValue := (*additionalEntries)[suffix]
+					if !strings.HasPrefix(suffixValue, "{^") {
+						validStrokes = false
+					}
+				}
 			}
 			if validStrokes {
 				// filter elements of strokeSet that are empty
