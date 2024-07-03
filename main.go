@@ -25,45 +25,68 @@ func main() {
 
 	logger := log.New(os.Stdout, "LOG: ", log.LstdFlags|log.Lmicroseconds)
 	var (
-		sourceDictPath  string
+		sourceDictPaths stringList
 		targetDictPaths stringList
 	)
-	flag.StringVar(&sourceDictPath, "lapwing_source", "", "source dictionary path")
+	flag.Var(&sourceDictPaths, "lapwing_source", "source dictionary path(s)")
 	flag.Var(&targetDictPaths, "output_target", "target dictionary path(s)")
 	flag.Parse()
 
-	if sourceDictPath == "" || len(targetDictPaths) == 0 {
-		fmt.Println("Usage: lapwing_augmentor --lapwing_source <source-dict> --output_target <target-dict> [--output_target <target-dict2> ...]")
+	if len(sourceDictPaths) == 0 || len(targetDictPaths) == 0 {
+		fmt.Println("Usage: lapwing_augmentor --lapwing_source <source-dict> [--lapwing_source <source-dict2> ...] --output_target <target-dict> [--output_target <target-dict2> ...]")
 		os.Exit(1)
 	}
 
-	logger.Println("Reading in dictionary from ", sourceDictPath)
-
-	sourceContents, err := os.ReadFile(sourceDictPath)
-	if err != nil {
-		fmt.Println("Error reading source dictionary:", err)
-		os.Exit(1)
-	}
-	var sourceJSON map[string]interface{}
-
-	if err := json.Unmarshal([]byte(sourceContents), &sourceJSON); err != nil {
-		fmt.Println("Error parsing JSON:", err)
-		os.Exit(1)
-	}
-
+	logger.Println("Reading in dictionary from ", sourceDictPaths)
 	originalDictionary := make(map[string]string)
-	for key, value := range sourceJSON {
-		originalDictionary[key] = value.(string)
+
+	for _, sourceDictPath := range sourceDictPaths {
+		sourceContents, err := os.ReadFile(sourceDictPath)
+		if err != nil {
+			fmt.Println("Error reading source dictionary:", err)
+			os.Exit(1)
+		}
+		var sourceJSON map[string]interface{}
+
+		if err := json.Unmarshal([]byte(sourceContents), &sourceJSON); err != nil {
+			fmt.Println("Error parsing JSON:", err)
+			os.Exit(1)
+		}
+		for key, value := range sourceJSON {
+			originalDictionary[key] = value.(string)
+		}
 	}
-	logger.Println("Done reading in dictionary. Size:", len(originalDictionary))
+
+	logger.Println("Done reading in dictionary(s). Combined size:", len(originalDictionary))
 
 	additionalEntries := make(map[string]string)
 	kwrSuffixEndPattern := `^.*/KWR([^/]+)$`
 	kwrSuffixEndRegex := regexp.MustCompile(kwrSuffixEndPattern)
 	suffixReplacements := make(map[string][]string)
-	suffixReplacements["/TEU"] = []string{"/TAOE", "/TAE"}
-	suffixReplacements["/PHEU"] = []string{"/PHAOE", "/PHAE"}
-	suffixReplacements["/HREU"] = []string{"/HRAOE", "/HRAE"}
+	directReplacementSuffixPairs := []string{
+		"H",
+		"HR",
+		"K",
+		"KR",
+		"KW",
+		"P",
+		"PH",
+		"PW",
+		"R",
+		"S",
+		"SR",
+		"SKWR",
+		"T",
+		"TK",
+		"TKPW",
+		"TPH",
+		"TH",
+		"THR",
+		"W",
+	}
+	for _, suffix := range directReplacementSuffixPairs {
+		suffixReplacements["/"+suffix+"EU"] = []string{"/" + suffix + "AOE", "/" + suffix + "AE"}
+	}
 	suffixReplacements["/-B/KWREU"] = []string{"/PWEU", "/PWAOE", "/PWAE"}
 	suffixReplacements["/-BL/KWREU"] = []string{"/PWHREU", "/PWHRAOE", "/PWHRAE"}
 	suffixReplacements["/-FL/KWREU"] = []string{"/TPHREU", "/TPHRAOE", "/TPHRAE"}
@@ -74,63 +97,52 @@ func main() {
 	vowelsDashes := `[AEOU\-*]+`
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
+	originalDictionaryIndex := 0
 	for key, value := range originalDictionary {
+		originalDictionaryIndex++
+		if originalDictionaryIndex%10000 == 0 {
+			logger.Println("Processed", originalDictionaryIndex, "/", len(originalDictionary), "entries")
+		}
+
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries)
 			for _, strokeSet := range alternateStrokes {
-				addEntryIfNotPresent(key, strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries, logger)
+				addEntryIfNotPresent(strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries)
 			}
 
 			// look for cases where we can safely remove KWR without creating word boundary errors
 			if strings.Contains(key, "/KWR") {
 				variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
 				for _, variation := range variations {
-					addEntryIfNotPresent(key, strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, logger)
+					addEntryIfNotPresent(strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries)
 				}
 			}
 		}
 
-		// check if we can safely fold in a /-D to the end
-		if strings.HasSuffix(key, "/-D") {
-			previousStroke := strokes[len(strokes)-2]
-			if vowelDashRegex.MatchString(previousStroke) {
-				previousStroke = getPartAfterVowels(previousStroke)
-			}
-			if !strings.HasSuffix(previousStroke, "D") {
-				keyVariation := strings.TrimSuffix(key, "/-D") + "D"
-				addEntryIfNotPresent(key, keyVariation, value, &originalDictionary, &additionalEntries, logger)
-				// now see if we can also fold in S/Z
-				keyStrokes := strings.Split(keyVariation, "/")
-				generateSZVariationForKey(keyVariation, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
-			}
-		}
-		if strings.HasSuffix(key, "/-G") {
-			previousStroke := strokes[len(strokes)-2]
-			if vowelDashRegex.MatchString(previousStroke) {
-				previousStroke = getPartAfterVowels(previousStroke)
-			}
-			if !strings.HasSuffix(previousStroke, "G") {
-				keyVariation := strings.TrimSuffix(key, "/-G") + "G"
-				addEntryIfNotPresent(key, keyVariation, value, &originalDictionary, &additionalEntries, logger)
-				// now see if we can also fold in S/Z
-				keyStrokes := strings.Split(keyVariation, "/")
-				generateSZVariationForKey(keyVariation, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
-			}
-		}
-
-		generateSZVariationForKey(key, strokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries, logger)
+		generateSZVariationForKey(key, strokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries)
 
 		for replacedSuffix, replacements := range suffixReplacements {
 			if strings.HasSuffix(key, replacedSuffix) {
 				for _, replacement := range replacements {
 					newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
-					addEntryIfNotPresent(key, newKey, value, &originalDictionary, &additionalEntries, logger)
+					addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
 				}
 				break
 			}
 		}
 
+		// for strokes that end with e.g. "/-<letters>", see if we can fold that into the last stroke
+		lastStroke := strokes[len(strokes)-1]
+		if strings.HasPrefix(lastStroke, "-") {
+			newStroke := strings.Replace(lastStroke, "-", "", 1)
+			newKey := strings.TrimSuffix(key, "/"+lastStroke) + newStroke
+			// this will check if it's a valid steno stroke
+			addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
+			// now see if we can also fold in S/Z
+			keyStrokes := strings.Split(newKey, "/")
+			generateSZVariationForKey(newKey, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries)
+		}
 		kwrMatch := kwrSuffixEndRegex.FindStringSubmatch(key)
 		if kwrMatch != nil {
 			kwrSuffix := kwrMatch[1]
@@ -143,15 +155,20 @@ func main() {
 			// so that we don't mix KWREU and KWRAE/AOE in the same outline which is kind of confusing
 			if kwrSuffix == "EU" && !(strings.Contains(key, "/KWREU/") && (strings.Contains(value, "y-") || strings.Contains(value, "y "))) {
 				keyVariation1 := fmt.Sprintf("%sAOE", kwrPrefix)
-				addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
+				addEntryIfNotPresent(keyVariation1, value, &originalDictionary, &additionalEntries)
 				keyVariation2 := fmt.Sprintf("%sAE", kwrPrefix)
-				addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
+				addEntryIfNotPresent(keyVariation2, value, &originalDictionary, &additionalEntries)
 			}
 		}
 
 	}
 
+	additionalEntryIndex := 0
 	for key, value := range additionalEntries {
+		additionalEntryIndex++
+		if additionalEntryIndex%10000 == 0 {
+			logger.Println("Processed", additionalEntryIndex, "/", len(additionalEntries), "additional entries (KWR removal)")
+		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			// see if we can generate KWR removed variations on additional entries we just generated
@@ -159,26 +176,28 @@ func main() {
 
 				variations := generateKwrRemovedVariations(key, strokes, &originalDictionary)
 				for _, variation := range variations {
-					addEntryIfNotPresent(key, strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, logger)
+					addEntryIfNotPresent(strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries)
 				}
 			}
 		}
 	}
 
 	// one last time
-	sizeBefore := len(additionalEntries)
+	additionalEntryIndex = 0
 	for key, value := range additionalEntries {
+		additionalEntryIndex++
+		if additionalEntryIndex%1000 == 0 {
+			logger.Println("Processed", additionalEntryIndex, "/", len(additionalEntries), "additional entries (alternate splits)")
+		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			// now try generating alternate syllabic splits on previously added entries
 			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries)
 			for _, strokeSet := range alternateStrokes {
-				addEntryIfNotPresent(key, strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries, logger)
+				addEntryIfNotPresent(strings.Join(strokeSet, "/"), value, &originalDictionary, &additionalEntries)
 			}
 		}
 	}
-	sizeAfter := len(additionalEntries)
-	fmt.Println("Added", sizeAfter-sizeBefore, "additional entries with alternate syllable strokes at the end")
 	log.Println("Added", len(additionalEntries), "additional entries overall")
 
 	// write out additionalEntries to file at targetDictPath
@@ -197,7 +216,8 @@ func main() {
 
 }
 
-func generateSZVariationForKey(key string, strokes []string, vowelDashRegex *regexp.Regexp, rightHandAfterS *regexp.Regexp, value string, originalDictionary map[string]string, additionalEntries map[string]string, logger *log.Logger) {
+func generateSZVariationForKey(key string, strokes []string, vowelDashRegex *regexp.Regexp, rightHandAfterS *regexp.Regexp,
+	value string, originalDictionary map[string]string, additionalEntries map[string]string) {
 	if strings.HasSuffix(key, "/-S") || strings.HasSuffix(key, "/-Z") {
 		previousStroke := strokes[len(strokes)-2]
 		if vowelDashRegex.MatchString(previousStroke) {
@@ -206,14 +226,14 @@ func generateSZVariationForKey(key string, strokes []string, vowelDashRegex *reg
 		if strings.HasSuffix(key, "/-S") && !strings.HasSuffix(previousStroke, "S") && !rightHandAfterS.MatchString(previousStroke) {
 			keyVariation1 := strings.TrimSuffix(key, "/-S") + "Z"
 			keyVariation2 := strings.TrimSuffix(key, "/-S") + "S"
-			addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
-			addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
+			addEntryIfNotPresent(keyVariation1, value, &originalDictionary, &additionalEntries)
+			addEntryIfNotPresent(keyVariation2, value, &originalDictionary, &additionalEntries)
 		}
 		if strings.HasSuffix(key, "/-Z") && !strings.HasSuffix(previousStroke, "Z") {
 			keyVariation1 := strings.TrimSuffix(key, "/-Z") + "Z"
 			keyVariation2 := strings.TrimSuffix(key, "/-Z") + "S"
-			addEntryIfNotPresent(key, keyVariation1, value, &originalDictionary, &additionalEntries, logger)
-			addEntryIfNotPresent(key, keyVariation2, value, &originalDictionary, &additionalEntries, logger)
+			addEntryIfNotPresent(keyVariation1, value, &originalDictionary, &additionalEntries)
+			addEntryIfNotPresent(keyVariation2, value, &originalDictionary, &additionalEntries)
 		}
 	}
 }
@@ -398,15 +418,24 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 				}
 			}
 			if shouldProcess {
+				prefixLettersBeingMoved := offset > 0
+				rhsWord := current[index+1]
 				for _, letter := range lhsStenoLetters {
-					rhsWord := current[index+1]
-					prefixLettersBeingMoved := offset > 0
 					movementAmountTooSmall := abs(offset) < len(letter) && strings.HasPrefix(rhsWord, letter)
-					dashLetter := "-" + letter
-					movementAmountTooSmallDash := abs(offset) < len(dashLetter) && strings.HasPrefix(rhsWord, dashLetter)
-					if prefixLettersBeingMoved && (movementAmountTooSmall || movementAmountTooSmallDash) {
+					if prefixLettersBeingMoved && movementAmountTooSmall {
 						shouldProcess = false
 						break
+					}
+				}
+				if shouldProcess {
+					// check for -<right hand expression>
+					for _, letter := range rhsStenoLetters {
+						dashLetter := "-" + letter
+						movementAmountTooSmallDash := abs(offset) < len(dashLetter) && strings.HasPrefix(rhsWord, dashLetter)
+						if prefixLettersBeingMoved && movementAmountTooSmallDash {
+							shouldProcess = false
+							break
+						}
 					}
 				}
 			}
@@ -542,7 +571,7 @@ func hasKey(key string, dict *map[string]string) bool {
 	return ok
 }
 
-func addEntryIfNotPresent(originalKey, key, value string, originalDict *map[string]string, additionalDict *map[string]string, logger *log.Logger) bool {
+func addEntryIfNotPresent(key, value string, originalDict *map[string]string, additionalDict *map[string]string) bool {
 	if !hasKey(key, originalDict) && !hasKey(key, additionalDict) {
 		strokes := strings.Split(key, "/")
 		for _, stroke := range strokes {
