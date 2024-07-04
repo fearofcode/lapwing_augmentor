@@ -292,6 +292,7 @@ func generateAsteriskRemovedCombinations(input string) []string {
 		}
 	}
 	// sort filteredResult for deterministic output
+	filteredResult = removeEmpty(filteredResult)
 	sort.Strings(filteredResult)
 	return filteredResult
 }
