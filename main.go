@@ -121,6 +121,7 @@ func main() {
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	originalDictionaryIndex := 0
 	sortedOriginalDictionaryKeys := sortedMapKeys(&originalDictionary)
+	// TODO benchmark #/PWOS/TPHEU/KWRA/SKP/HER/S*E/TKPWO/SREU/TPHA and what makes it take so long
 	for _, key := range sortedOriginalDictionaryKeys {
 		value := originalDictionary[key]
 		originalDictionaryIndex++
@@ -129,6 +130,10 @@ func main() {
 		}
 
 		strokes := strings.Split(key, "/")
+		if len(strokes) > 5 && value[0] >= 'A' && value[0] <= 'Z' {
+			logger.Println("Skipping key", key, "value = ", value, "since it looks to be a proper name with > 5 strokes and probably has no strokes worth generating")
+			continue
+		}
 		if len(strokes) >= 2 {
 			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries)
 			for _, strokeSet := range alternateStrokes {
@@ -198,9 +203,6 @@ func main() {
 	for _, key := range sortedAdditionalEntryKeys {
 		value := additionalEntries[key]
 		additionalEntryIndex++
-		if additionalEntryIndex%10000 == 0 {
-			logger.Println("Processed", additionalEntryIndex, "/", len(additionalEntries), "additional entries (KWR removal)")
-		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			// see if we can generate KWR removed variations on additional entries we just generated
