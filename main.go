@@ -125,12 +125,8 @@ func main() {
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	originalDictionaryIndex := 0
 	sortedOriginalDictionaryKeys := sortedMapKeys(&originalDictionary)
-	// TODO benchmark #/PWOS/TPHEU/KWRA/SKP/HER/S*E/TKPWO/SREU/TPHA and what makes it take so long
 	for _, key := range sortedOriginalDictionaryKeys {
 		value := originalDictionary[key]
-		if value == "merry-go-round" {
-			fmt.Println("holup")
-		}
 		originalDictionaryIndex++
 		if originalDictionaryIndex%10000 == 0 {
 			logger.Println("Processed", originalDictionaryIndex, "/", len(originalDictionary), "entries")
@@ -295,12 +291,14 @@ func generateAsteriskRemovedCombinations(input string) []string {
 	// Filter out values of result that are equal to input
 	filteredResult := make([]string, 0, len(result))
 	for _, combination := range result {
-		if combination != input {
+		// remove double slash in case a stroke was only *
+		combination = strings.ReplaceAll(combination, "//", "/")
+		if len(combination) > 0 && combination != input {
 			filteredResult = append(filteredResult, combination)
 		}
+		filteredResult = removeEmpty(filteredResult)
 	}
 	// sort filteredResult for deterministic output
-	filteredResult = removeEmpty(filteredResult)
 	sort.Strings(filteredResult)
 	return filteredResult
 }
