@@ -456,6 +456,8 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		"FT",
 		"PL",
 		"BG",
+		"BGT",
+		"PBGT",
 		"LG",
 		"PB",
 		"PBLG",
@@ -490,13 +492,15 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 			// Check if the second element starts with KWR followed by a vowel or PW
 			shouldProcess := !isGlider(current[index+1])
 			offset := offsets[index]
-			for _, letter := range rhsStenoLetters {
-				lhsWord := current[index]
-				prefixLettersBeingMoved := offset < 0
-				movementAmountTooSmall := abs(offset) < len(letter)
-				if prefixLettersBeingMoved && movementAmountTooSmall && strings.HasSuffix(lhsWord, letter) {
-					shouldProcess = false
-					break
+			if shouldProcess && offset < 0 {
+
+				for _, letter := range rhsStenoLetters {
+					lhsWord := current[index]
+					movementAmountTooSmall := abs(offset) < len(letter)
+					if movementAmountTooSmall && strings.HasSuffix(lhsWord, letter) {
+						shouldProcess = false
+						break
+					}
 				}
 			}
 			if shouldProcess {
@@ -581,14 +585,22 @@ func returnIfContains(list string, char string) string {
 func moveRhsPrefixToLhsStroke(lhs, rhsPrefix string) string {
 	alteredRhsLetters := make(map[string]string)
 	//           left hand    right hand
+	alteredRhsLetters["PW"] = "B"      // B
+	alteredRhsLetters["TK"] = "D"      // D
+	alteredRhsLetters["TP"] = "F"      // F
+	alteredRhsLetters["TKPW"] = "G"    // G
+	alteredRhsLetters["SKWR"] = "PBLG" // J
+	alteredRhsLetters["K"] = "BG"      // K
+	alteredRhsLetters["HR"] = "L"      // L
 	alteredRhsLetters["PH"] = "PL"     // M
 	alteredRhsLetters["TPH"] = "PB"    // N
 	alteredRhsLetters["SR"] = "F"      // V
-	alteredRhsLetters["K"] = "BG"      // K
 	alteredRhsLetters["TH"] = "*T"     // TH
-	alteredRhsLetters["SKWR"] = "PBLG" // J
 	alteredRhsLetters["CH"] = "FP"
+	alteredRhsLetters["KH"] = "C"
 	alteredRhsLetters["SH"] = "RB"
+	alteredRhsLetters["SR"] = "F"    // V
+	alteredRhsLetters["STKPW"] = "Z" // Z
 	if _, ok := alteredRhsLetters[rhsPrefix]; ok {
 		lookup := alteredRhsLetters[rhsPrefix]
 		if strings.HasPrefix(lookup, "*") {
@@ -613,6 +625,7 @@ func moveLhsSuffixToRhsStroke(rhs, lhsPrefix string) string {
 	alteredLhsLetters["TPH"] = "PB"    // N
 	alteredLhsLetters["F"] = "SR"      // V
 	alteredLhsLetters["BG"] = "K"      // K
+	alteredLhsLetters["BGT"] = "-BGT"  // KT
 	alteredLhsLetters["PBLG"] = "SKWR" // J
 	alteredLhsLetters["FP"] = "CH"
 	alteredLhsLetters["RB"] = "SH"
