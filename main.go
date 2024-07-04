@@ -126,9 +126,6 @@ func main() {
 	originalDictionaryIndex := 0
 	sortedOriginalDictionaryKeys := sortedMapKeys(&originalDictionary)
 	for _, key := range sortedOriginalDictionaryKeys {
-		if key == "EURPBT/HREBG/TWAL" {
-			fmt.Println("Skipping EURPBT/HREBG/TWAL")
-		}
 		value := originalDictionary[key]
 		originalDictionaryIndex++
 		if originalDictionaryIndex%10000 == 0 {
