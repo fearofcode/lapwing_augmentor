@@ -126,6 +126,9 @@ func main() {
 	originalDictionaryIndex := 0
 	sortedOriginalDictionaryKeys := sortedMapKeys(&originalDictionary)
 	for _, key := range sortedOriginalDictionaryKeys {
+		if key == "EURPBT/HREBG/TWAL" {
+			fmt.Println("Skipping EURPBT/HREBG/TWAL")
+		}
 		value := originalDictionary[key]
 		originalDictionaryIndex++
 		if originalDictionaryIndex%10000 == 0 {
@@ -462,6 +465,7 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		"STKPW",
 		"SH",
 		"KH",
+		"THR",
 	}
 	rhsStenoLetters := []string{
 		"FT",
@@ -479,6 +483,7 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		"FRPB",
 		"GS",
 		"BGS",
+		"PBT",
 		"PLT",
 		"LT",
 		"BL",
