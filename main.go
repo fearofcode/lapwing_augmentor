@@ -223,6 +223,17 @@ func main() {
 		for _, combination := range asteriskRemovedCombinations {
 			addEntryIfNotPresent(combination, value, &originalDictionary, &additionalEntries)
 		}
+		// see if we can generate suffix variations of generated additional entries
+		for _, replacedSuffix := range suffixReplacementKeys {
+			replacements := suffixReplacements[replacedSuffix]
+			if strings.HasSuffix(key, replacedSuffix) {
+				for _, replacement := range replacements {
+					newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
+					addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
+				}
+				break
+			}
+		}
 	}
 
 	// one last time
