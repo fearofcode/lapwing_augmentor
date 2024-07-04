@@ -646,7 +646,7 @@ func moveLhsSuffixToRhsStroke(rhs, lhsPrefix string) string {
 	//           right hand    left hand
 	alteredLhsLetters["PL"] = "PH"     // M
 	alteredLhsLetters["TPH"] = "PB"    // N
-	alteredLhsLetters["F"] = "SR"      // V
+	alteredLhsLetters["F"] = "TP"      // V
 	alteredLhsLetters["BG"] = "K"      // K
 	alteredLhsLetters["BGT"] = "-BGT"  // KT
 	alteredLhsLetters["PBLG"] = "SKWR" // J
