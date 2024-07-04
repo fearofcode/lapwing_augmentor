@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func sortedMapKeys(dict *map[string]string) []string {
+func sortedMapKeys[V string | []string](dict *map[string]V) []string {
 	keys := make([]string, 0, len(*dict))
 	for key := range *dict {
 		keys = append(keys, key)
@@ -115,6 +115,7 @@ func main() {
 	suffixReplacements["/-P/KWREU"] = []string{"/PEU", "/PAOE", "/PAE"}
 	suffixReplacements["/-PL/KWREU"] = []string{"/PHREU", "/PHRAOE", "/PHRAE"}
 	suffixReplacements["R/KWREU"] = []string{"/REU", "/RAOE", "/RAE"}
+	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	vowelsDashes := `[AEOU\-*]+`
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
@@ -145,7 +146,8 @@ func main() {
 
 		generateSZVariationForKey(key, strokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries)
 
-		for replacedSuffix, replacements := range suffixReplacements {
+		for _, replacedSuffix := range suffixReplacementKeys {
+			replacements := suffixReplacements[replacedSuffix]
 			if strings.HasSuffix(key, replacedSuffix) {
 				for _, replacement := range replacements {
 					newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
@@ -184,6 +186,11 @@ func main() {
 			}
 		}
 
+		// see if we can generate asterisk-removed variations
+		asteriskRemovedCombinations := generateAsteriskRemovedCombinations(key)
+		for _, combination := range asteriskRemovedCombinations {
+			addEntryIfNotPresent(combination, value, &originalDictionary, &additionalEntries)
+		}
 	}
 
 	additionalEntryIndex := 0
@@ -204,6 +211,11 @@ func main() {
 					addEntryIfNotPresent(strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries)
 				}
 			}
+		}
+		// see if we can generate asterisk-removed variations of generated additional entries
+		asteriskRemovedCombinations := generateAsteriskRemovedCombinations(key)
+		for _, combination := range asteriskRemovedCombinations {
+			addEntryIfNotPresent(combination, value, &originalDictionary, &additionalEntries)
 		}
 	}
 
@@ -241,6 +253,45 @@ func main() {
 		log.Println("Wrote", len(additionalEntries), "additional entries to", targetPath)
 	}
 
+}
+
+func generateAsteriskRemovedCombinations(input string) []string {
+	if len(input) <= 2 {
+		return []string{}
+	}
+	var result []string
+
+	var generate func(current []rune, index int)
+	generate = func(current []rune, index int) {
+		if index == len(current) {
+			result = append(result, strings.ReplaceAll(string(current), " ", ""))
+			return
+		}
+
+		if current[index] == '*' {
+			// replace '*' with ' '
+			current[index] = ' '
+			generate(current, index+1)
+
+			// replace '*' with '*'
+			current[index] = '*'
+		}
+
+		generate(current, index+1)
+	}
+
+	generate([]rune(input), 0)
+
+	// Filter out values of result that are equal to input
+	filteredResult := make([]string, 0, len(result))
+	for _, combination := range result {
+		if combination != input {
+			filteredResult = append(filteredResult, combination)
+		}
+	}
+	// sort filteredResult for deterministic output
+	sort.Strings(filteredResult)
+	return filteredResult
 }
 
 func generateSZVariationForKey(key string, strokes []string, vowelDashRegex *regexp.Regexp, rightHandAfterS *regexp.Regexp,
@@ -293,6 +344,10 @@ func generateKwrRemovedVariations(key string, strokes []string, originalDictiona
 		}
 	}
 
+	// sort variations
+	slices.SortFunc(variations, func(a, b []string) int {
+		return strings.Compare(strings.Join(a, "/"), strings.Join(b, "/"))
+	})
 	return variations
 }
 
@@ -554,12 +609,10 @@ func moveRhsPrefixToLhsStroke(lhs, rhsPrefix string) string {
 func moveLhsSuffixToRhsStroke(rhs, lhsPrefix string) string {
 	alteredLhsLetters := make(map[string]string)
 	//           right hand    left hand
-	alteredLhsLetters["PL"] = "PH"  // M
-	alteredLhsLetters["TPH"] = "PB" // N
-	alteredLhsLetters["F"] = "SR"   // V
-	alteredLhsLetters["BG"] = "K"   // K
-	// TODO let's not bother with *T -> TH
-	// alteredLhsLetters["*T"] = "TH"     // TH
+	alteredLhsLetters["PL"] = "PH"     // M
+	alteredLhsLetters["TPH"] = "PB"    // N
+	alteredLhsLetters["F"] = "SR"      // V
+	alteredLhsLetters["BG"] = "K"      // K
 	alteredLhsLetters["PBLG"] = "SKWR" // J
 	alteredLhsLetters["FP"] = "CH"
 	alteredLhsLetters["RB"] = "SH"
@@ -625,35 +678,7 @@ func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary 
 			if !validStrokes {
 				continue
 			}
-			// check if we have created a multi-stroke ambiguity where e.g.
-			// our outline for a word like "coolant" is ambiguous with "cool ant"
-			// (lapwing has KAO/HRAPBT for that specific word. so KAOHR/APBT is not
-			// a valid alternate split due to the ambiguity issue just mentioned)
-			// but we also want to check that last 2, first n-2, etc strokes are
-			// also not creating outline ambiguities
-			for strokesBack := 1; strokesBack < len(strokeSet); strokesBack++ {
-				splitPoint := len(strokeSet) - strokesBack
-				suffixStrokes := strokeSet[splitPoint:]
-				suffix := strings.Join(suffixStrokes, "/")
-				prefixStrokes := strokeSet[:splitPoint]
-				prefix := strings.Join(prefixStrokes, "/")
-				if hasKey(prefix, originalDictionary) && hasKey(suffix, originalDictionary) {
-					// check if the suffix is listed as a suffix in the dictionary itself
-					// ("{^<whatever>}") or is actually a separate standalone word
-					suffixValue := (*originalDictionary)[suffix]
-					if !strings.HasPrefix(suffixValue, "{^") {
-						validStrokes = false
-					}
-				}
-				if hasKey(prefix, additionalEntries) && hasKey(suffix, additionalEntries) {
-					// check if the suffix is listed as a suffix in the dictionary itself
-					// ("{^<whatever>}") or is actually a separate standalone word
-					suffixValue := (*additionalEntries)[suffix]
-					if !strings.HasPrefix(suffixValue, "{^") {
-						validStrokes = false
-					}
-				}
-			}
+			validStrokes = validWordBoundaries(strokeSet, originalDictionary, additionalEntries)
 			if validStrokes {
 				// filter elements of strokeSet that are empty
 				strokeSet = removeEmpty(strokeSet)
@@ -665,7 +690,79 @@ func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary 
 			}
 		}
 	}
+
+	// sort alternateStrokes
+	slices.SortFunc(alternateStrokes, func(a, b []string) int {
+		return strings.Compare(strings.Join(a, "/"), strings.Join(b, "/"))
+	})
 	return alternateStrokes
+}
+
+func validWordBoundaries(strokeSet []string, originalDictionary *map[string]string, additionalEntries *map[string]string) bool {
+	if len(strokeSet) < 2 {
+		return true
+	}
+
+	// check from right to left
+	for strokesBack := 1; strokesBack < len(strokeSet); strokesBack++ {
+		splitPoint := len(strokeSet) - strokesBack
+		suffixStrokes := strokeSet[splitPoint:]
+		suffix := strings.Join(suffixStrokes, "/")
+		prefixStrokes := strokeSet[:splitPoint]
+		prefix := strings.Join(prefixStrokes, "/")
+		if hasKey(prefix, originalDictionary) && hasKey(suffix, originalDictionary) {
+			suffixValue := (*originalDictionary)[suffix]
+			if !strings.HasPrefix(suffixValue, "{^") {
+				return false
+			}
+		}
+		if hasKey(prefix, additionalEntries) && hasKey(suffix, additionalEntries) {
+			suffixValue := (*additionalEntries)[suffix]
+			if !strings.HasPrefix(suffixValue, "{^") {
+				return false
+			}
+		}
+	}
+	// now check from left to right
+	for strokesForward := 1; strokesForward < len(strokeSet); strokesForward++ {
+		splitPoint := strokesForward
+		prefixStrokes := strokeSet[:splitPoint]
+		prefix := strings.Join(prefixStrokes, "/")
+		suffixStrokes := strokeSet[splitPoint:]
+		suffix := strings.Join(suffixStrokes, "/")
+		if hasKey(prefix, originalDictionary) && hasKey(suffix, originalDictionary) {
+			suffixValue := (*originalDictionary)[suffix]
+			if !strings.HasPrefix(suffixValue, "{^") {
+				return false
+			}
+		}
+		if hasKey(prefix, additionalEntries) && hasKey(suffix, additionalEntries) {
+			suffixValue := (*additionalEntries)[suffix]
+			if !strings.HasPrefix(suffixValue, "{^") {
+				return false
+			}
+		}
+	}
+	// another form of possible outline conflict we might want to avoid is like when we have:
+	// <stroke 1>/<stroke 2>/<stroke 3>/<stroke 4>
+	// where stroke 1 already exists and so do strokes 2 and 3
+	// if len(strokeSet) >= 3 {
+	// 	for validPrefixStrokes := 1; validPrefixStrokes < len(strokeSet)-1; validPrefixStrokes++ {
+	// 		prefixStrokes := strokeSet[:validPrefixStrokes]
+	// 		prefix := strings.Join(prefixStrokes, "/")
+	// 		if hasKey(prefix, originalDictionary) || hasKey(prefix, additionalEntries) {
+	// 			for suffixPoint := validPrefixStrokes + 1; suffixPoint < len(strokeSet); suffixPoint++ {
+	// 				suffix := strings.Join(strokeSet[validPrefixStrokes:suffixPoint], "/")
+	// 				if hasKey(suffix, originalDictionary) || hasKey(suffix, additionalEntries) {
+	// 					return false
+	// 				}
+	// 			}
+	// 		} else {
+	// 			break
+	// 		}
+	// 	}
+	// }
+	return true
 }
 
 func removeEmpty(strokeSet []string) []string {
@@ -699,6 +796,9 @@ func hasKey(key string, dict *map[string]string) bool {
 func addEntryIfNotPresent(key, value string, originalDict *map[string]string, additionalDict *map[string]string) bool {
 	if !hasKey(key, originalDict) && !hasKey(key, additionalDict) {
 		strokes := strings.Split(key, "/")
+		if !validWordBoundaries(strokes, originalDict, additionalDict) { // check if there is a conflict
+			return false
+		}
 		for _, stroke := range strokes {
 			if !isValidStenoOrder(stroke) {
 				return false
