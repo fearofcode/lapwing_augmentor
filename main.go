@@ -470,13 +470,15 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 				newStrokes := make([]string, len(current))
 				copy(newStrokes, current)
 
-				if offset < 0 {
+				// don't move *T and similar LHS strings around
+				lhsHasAsterisk := strings.Contains(newStrokes[index], "*")
+				if offset < 0 && !lhsHasAsterisk {
 					// Move characters from first string to second
 					moveChars := min(-offset, len(newStrokes[index]))
 					lhsSuffix := newStrokes[index][len(newStrokes[index])-moveChars:]
 					newStrokes[index+1] = moveLhsSuffixToRhsStroke(newStrokes[index+1], lhsSuffix)
 					newStrokes[index] = newStrokes[index][:len(newStrokes[index])-moveChars]
-				} else {
+				} else if offset > 0 {
 					// Move characters from second string to first
 					moveChars := min(offset, len(newStrokes[index+1]))
 					rhsChars := newStrokes[index+1][:moveChars]
@@ -494,7 +496,23 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 	}
 
 	generate(0, strokes)
-	return result
+
+	if len(result) <= 1 {
+		return result
+	}
+
+	// filter uniquevalues in `result`
+	uniqueValues := make(map[string]bool)
+	uniqueValues[strings.Join(strokes, "/")] = true
+	var uniqueValuesList [][]string
+	for _, combination := range result {
+		uniqueValue := strings.Join(combination, "/")
+		if _, ok := uniqueValues[uniqueValue]; !ok {
+			uniqueValues[uniqueValue] = true
+			uniqueValuesList = append(uniqueValuesList, combination)
+		}
+	}
+	return uniqueValuesList
 }
 
 func returnIfContains(list string, char string) string {
