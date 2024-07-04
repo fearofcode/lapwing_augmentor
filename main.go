@@ -460,6 +460,8 @@ func applyOffsetsToStrokes(strokes []string, offsets []int) [][]string {
 		"KP",
 		"KWR",
 		"STKPW",
+		"SH",
+		"KH",
 	}
 	rhsStenoLetters := []string{
 		"FT",
@@ -605,8 +607,7 @@ func moveRhsPrefixToLhsStroke(lhs, rhsPrefix string) string {
 	alteredRhsLetters["TPH"] = "PB"    // N
 	alteredRhsLetters["SR"] = "F"      // V
 	alteredRhsLetters["TH"] = "*T"     // TH
-	alteredRhsLetters["CH"] = "FP"
-	alteredRhsLetters["KH"] = "C"
+	alteredRhsLetters["KH"] = "FP"
 	alteredRhsLetters["SH"] = "RB"
 	alteredRhsLetters["SR"] = "F"    // V
 	alteredRhsLetters["STKPW"] = "Z" // Z
