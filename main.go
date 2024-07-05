@@ -306,6 +306,7 @@ func addSuffixReplacements(suffixReplacementKeys []string, suffixReplacements ma
 		if strings.HasSuffix(key, replacedSuffix) {
 			for _, replacement := range replacements {
 				newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
+				newKey = strings.ReplaceAll(newKey, "//", "/")
 				addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
 			}
 			break
@@ -319,6 +320,7 @@ func addStringReplacements(replacementKeys []string, replacements map[string][]s
 		if strings.Contains(key, replacedKey) {
 			for _, replacement := range replacements {
 				newKey := strings.ReplaceAll(key, replacedKey, replacement)
+				newKey = strings.ReplaceAll(newKey, "//", "/")
 				addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
 			}
 		}
