@@ -127,25 +127,25 @@ func main() {
 	suffixReplacements["F/KWREU"] = []string{"/TPEU", "/TPOE", "/TPAE"}
 	suffixReplacements["BG/KWREU"] = []string{"/KEU", "/KOE", "/KAE"}
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
-	// stringReplacements := make(map[string][]string)
-	// stringReplacements["/-B/KWR"] = []string{"/PW"}
-	// stringReplacements["/-BL/KWR"] = []string{"/PWHR"}
-	// stringReplacements["/-FL/KWR"] = []string{"/TPHR"}
-	// stringReplacements["/-L/KWR"] = []string{"/HR"}
-	// stringReplacements["/-P/KWR"] = []string{"/P"}
-	// stringReplacements["/-PL/KWR"] = []string{"/PHR"}
-	// stringReplacements["D/KWR"] = []string{"/TK"}      // D
-	// stringReplacements["G/KWR"] = []string{"/TPKW"}    // G
-	// stringReplacements["PBLG/KWR"] = []string{"/PBLG"} // J
-	// stringReplacements["L/KWR"] = []string{"/PBLG"}    // L
-	// stringReplacements["PL/KWR"] = []string{"/PH"}     // M
-	// stringReplacements["PB/KWR"] = []string{"/TPH"}    // N
-	// stringReplacements["P/KWR"] = []string{"/P"}       // P
-	// stringReplacements["R/KWR"] = []string{"/R"}       // R
-	// stringReplacements["S/KWR"] = []string{"/S"}       // S
-	// stringReplacements["T/KWR"] = []string{"/T"}       // T
-	// stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
-	// stringReplacementKeys := sortedMapKeys(&stringReplacements)
+	stringReplacements := make(map[string][]string)
+	stringReplacements["/-B/KWR"] = []string{"/PW"}
+	stringReplacements["/-BL/KWR"] = []string{"/PWHR"}
+	stringReplacements["/-FL/KWR"] = []string{"/TPHR"}
+	stringReplacements["/-L/KWR"] = []string{"/HR"}
+	stringReplacements["/-P/KWR"] = []string{"/P"}
+	stringReplacements["/-PL/KWR"] = []string{"/PHR"}
+	stringReplacements["D/KWR"] = []string{"/TK"}      // D
+	stringReplacements["G/KWR"] = []string{"/TPKW"}    // G
+	stringReplacements["PBLG/KWR"] = []string{"/PBLG"} // J
+	stringReplacements["L/KWR"] = []string{"/PBLG"}    // L
+	stringReplacements["PL/KWR"] = []string{"/PH"}     // M
+	stringReplacements["PB/KWR"] = []string{"/TPH"}    // N
+	stringReplacements["P/KWR"] = []string{"/P"}       // P
+	stringReplacements["R/KWR"] = []string{"/R"}       // R
+	stringReplacements["S/KWR"] = []string{"/S"}       // S
+	stringReplacements["T/KWR"] = []string{"/T"}       // T
+	stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
+	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
 	vowelsDashes := `[AEOU\-*]+`
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
@@ -183,7 +183,7 @@ func main() {
 		generateSZVariationForKey(key, strokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries)
 
 		addSuffixReplacements(suffixReplacementKeys, suffixReplacements, key, value, originalDictionary, additionalEntries)
-		// addStringReplacements(stringReplacementKeys, stringReplacements, key, value, originalDictionary, additionalEntries)
+		addStringReplacements(stringReplacementKeys, stringReplacements, key, value, originalDictionary, additionalEntries)
 
 		// for strokes that end with e.g. "/-<letters>", see if we can fold that into the last stroke
 		lastStroke := strokes[len(strokes)-1]
@@ -244,7 +244,7 @@ func main() {
 		}
 		// see if we can generate suffix variations of generated additional entries
 		addSuffixReplacements(suffixReplacementKeys, suffixReplacements, key, value, originalDictionary, additionalEntries)
-		// addStringReplacements(stringReplacementKeys, stringReplacements, key, value, originalDictionary, additionalEntries)
+		addStringReplacements(stringReplacementKeys, stringReplacements, key, value, originalDictionary, additionalEntries)
 	}
 
 	// one last time
@@ -801,9 +801,12 @@ func validWordBoundaries(strokeSet []string, originalDictionary *map[string]stri
 		prefix := strings.Join(prefixStrokes, "/")
 		if (hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
 			(hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary)) {
-			suffixValue := (*originalDictionary)[suffix]
-			if !strings.HasPrefix(suffixValue, "{^") {
-				return false
+			prefixValue := (*originalDictionary)[prefix]
+			if !strings.HasSuffix(prefixValue, "^}") {
+				suffixValue := (*originalDictionary)[suffix]
+				if !strings.HasPrefix(suffixValue, "{^") {
+					return false
+				}
 			}
 		}
 	}
@@ -816,9 +819,12 @@ func validWordBoundaries(strokeSet []string, originalDictionary *map[string]stri
 		suffix := strings.Join(suffixStrokes, "/")
 		if (hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
 			(hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary)) {
-			suffixValue := (*originalDictionary)[suffix]
-			if !strings.HasPrefix(suffixValue, "{^") {
-				return false
+			prefixValue := (*originalDictionary)[prefix]
+			if !strings.HasSuffix(prefixValue, "^}") {
+				suffixValue := (*originalDictionary)[suffix]
+				if !strings.HasPrefix(suffixValue, "{^") {
+					return false
+				}
 			}
 		}
 	}
