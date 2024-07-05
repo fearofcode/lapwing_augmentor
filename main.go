@@ -92,6 +92,7 @@ func main() {
 		"H",
 		"HR",
 		"K",
+		"KH",
 		"KR",
 		"KW",
 		"P",
@@ -102,11 +103,13 @@ func main() {
 		"SR",
 		"SKWR",
 		"T",
+		"TH",
+		"THR",
 		"TK",
 		"TKPW",
 		"TPH",
-		"TH",
-		"THR",
+		"TP",
+		"TR",
 		"W",
 	}
 	for _, suffix := range directReplacementSuffixPairs {
@@ -119,7 +122,31 @@ func main() {
 	suffixReplacements["/-P/KWREU"] = []string{"/PEU", "/PAOE", "/PAE"}
 	suffixReplacements["/-PL/KWREU"] = []string{"/PHREU", "/PHRAOE", "/PHRAE"}
 	suffixReplacements["R/KWREU"] = []string{"/REU", "/RAOE", "/RAE"}
+	suffixReplacements["PB/KWREU"] = []string{"/TPHEU", "/TPHAOE", "/TPHAE"}
+	suffixReplacements["PL/KWREU"] = []string{"/PHEU", "/PHAOE", "/PHAE"}
+	suffixReplacements["F/KWREU"] = []string{"/TPEU", "/TPOE", "/TPAE"}
+	suffixReplacements["BG/KWREU"] = []string{"/KEU", "/KOE", "/KAE"}
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
+	// stringReplacements := make(map[string][]string)
+	// stringReplacements["/-B/KWR"] = []string{"/PW"}
+	// stringReplacements["/-BL/KWR"] = []string{"/PWHR"}
+	// stringReplacements["/-FL/KWR"] = []string{"/TPHR"}
+	// stringReplacements["/-L/KWR"] = []string{"/HR"}
+	// stringReplacements["/-P/KWR"] = []string{"/P"}
+	// stringReplacements["/-PL/KWR"] = []string{"/PHR"}
+	// stringReplacements["D/KWR"] = []string{"/TK"}      // D
+	// stringReplacements["G/KWR"] = []string{"/TPKW"}    // G
+	// stringReplacements["PBLG/KWR"] = []string{"/PBLG"} // J
+	// stringReplacements["L/KWR"] = []string{"/PBLG"}    // L
+	// stringReplacements["PL/KWR"] = []string{"/PH"}     // M
+	// stringReplacements["PB/KWR"] = []string{"/TPH"}    // N
+	// stringReplacements["P/KWR"] = []string{"/P"}       // P
+	// stringReplacements["R/KWR"] = []string{"/R"}       // R
+	// stringReplacements["S/KWR"] = []string{"/S"}       // S
+	// stringReplacements["T/KWR"] = []string{"/T"}       // T
+	// stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
+	// stringReplacementKeys := sortedMapKeys(&stringReplacements)
+
 	vowelsDashes := `[AEOU\-*]+`
 	vowelDashRegex := regexp.MustCompile(vowelsDashes)
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
@@ -155,16 +182,8 @@ func main() {
 
 		generateSZVariationForKey(key, strokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries)
 
-		for _, replacedSuffix := range suffixReplacementKeys {
-			replacements := suffixReplacements[replacedSuffix]
-			if strings.HasSuffix(key, replacedSuffix) {
-				for _, replacement := range replacements {
-					newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
-					addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
-				}
-				break
-			}
-		}
+		addSuffixReplacements(suffixReplacementKeys, suffixReplacements, key, value, originalDictionary, additionalEntries)
+		// addStringReplacements(stringReplacementKeys, stringReplacements, key, value, originalDictionary, additionalEntries)
 
 		// for strokes that end with e.g. "/-<letters>", see if we can fold that into the last stroke
 		lastStroke := strokes[len(strokes)-1]
@@ -224,16 +243,8 @@ func main() {
 			addEntryIfNotPresent(combination, value, &originalDictionary, &additionalEntries)
 		}
 		// see if we can generate suffix variations of generated additional entries
-		for _, replacedSuffix := range suffixReplacementKeys {
-			replacements := suffixReplacements[replacedSuffix]
-			if strings.HasSuffix(key, replacedSuffix) {
-				for _, replacement := range replacements {
-					newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
-					addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
-				}
-				break
-			}
-		}
+		addSuffixReplacements(suffixReplacementKeys, suffixReplacements, key, value, originalDictionary, additionalEntries)
+		// addStringReplacements(stringReplacementKeys, stringReplacements, key, value, originalDictionary, additionalEntries)
 	}
 
 	// one last time
@@ -243,7 +254,7 @@ func main() {
 		value := additionalEntries[key]
 		additionalEntryIndex++
 		if additionalEntryIndex%1000 == 0 {
-			logger.Println("Processed", additionalEntryIndex, "/", len(additionalEntries), "additional entries (alternate splits)")
+			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (alternate splits)")
 		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
@@ -254,7 +265,24 @@ func main() {
 			}
 		}
 	}
-	log.Println("Added", len(additionalEntries), "additional entries overall")
+
+	// do a final check of additional entries for valid word boundaries due to weird issues with order of addition
+	additionalEntryIndex = 0
+	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
+	for _, key := range sortedAdditionalEntryKeys {
+		additionalEntryIndex++
+		if additionalEntryIndex%1000 == 0 {
+			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries for final conflicting word boundaries")
+		}
+		strokes := strings.Split(key, "/")
+		if len(strokes) >= 2 {
+			if !validWordBoundaries(strokes, &originalDictionary, &additionalEntries) {
+				logger.Println("Removing", key, "due to conflicting word boundaries")
+				delete(additionalEntries, key)
+			}
+		}
+	}
+	log.Println("Added", len(additionalEntries), "additional entries overall after checking for conflicting word boundaries")
 
 	// write out additionalEntries to file at targetDictPath
 	contents, err := json.MarshalIndent(additionalEntries, "", "  ")
@@ -270,6 +298,31 @@ func main() {
 		log.Println("Wrote", len(additionalEntries), "additional entries to", targetPath)
 	}
 
+}
+
+func addSuffixReplacements(suffixReplacementKeys []string, suffixReplacements map[string][]string, key string, value string, originalDictionary map[string]string, additionalEntries map[string]string) {
+	for _, replacedSuffix := range suffixReplacementKeys {
+		replacements := suffixReplacements[replacedSuffix]
+		if strings.HasSuffix(key, replacedSuffix) {
+			for _, replacement := range replacements {
+				newKey := strings.TrimSuffix(key, replacedSuffix) + replacement
+				addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
+			}
+			break
+		}
+	}
+}
+
+func addStringReplacements(replacementKeys []string, replacements map[string][]string, key string, value string, originalDictionary map[string]string, additionalEntries map[string]string) {
+	for _, replacedKey := range replacementKeys {
+		replacements := replacements[replacedKey]
+		if strings.Contains(key, replacedKey) {
+			for _, replacement := range replacements {
+				newKey := strings.ReplaceAll(key, replacedKey, replacement)
+				addEntryIfNotPresent(newKey, value, &originalDictionary, &additionalEntries)
+			}
+		}
+	}
 }
 
 func generateAsteriskRemovedCombinations(input string) []string {
@@ -746,14 +799,9 @@ func validWordBoundaries(strokeSet []string, originalDictionary *map[string]stri
 		suffix := strings.Join(suffixStrokes, "/")
 		prefixStrokes := strokeSet[:splitPoint]
 		prefix := strings.Join(prefixStrokes, "/")
-		if hasKey(prefix, originalDictionary) && hasKey(suffix, originalDictionary) {
+		if (hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
+			(hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary)) {
 			suffixValue := (*originalDictionary)[suffix]
-			if !strings.HasPrefix(suffixValue, "{^") {
-				return false
-			}
-		}
-		if hasKey(prefix, additionalEntries) && hasKey(suffix, additionalEntries) {
-			suffixValue := (*additionalEntries)[suffix]
 			if !strings.HasPrefix(suffixValue, "{^") {
 				return false
 			}
@@ -766,14 +814,9 @@ func validWordBoundaries(strokeSet []string, originalDictionary *map[string]stri
 		prefix := strings.Join(prefixStrokes, "/")
 		suffixStrokes := strokeSet[splitPoint:]
 		suffix := strings.Join(suffixStrokes, "/")
-		if hasKey(prefix, originalDictionary) && hasKey(suffix, originalDictionary) {
+		if (hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
+			(hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary)) {
 			suffixValue := (*originalDictionary)[suffix]
-			if !strings.HasPrefix(suffixValue, "{^") {
-				return false
-			}
-		}
-		if hasKey(prefix, additionalEntries) && hasKey(suffix, additionalEntries) {
-			suffixValue := (*additionalEntries)[suffix]
 			if !strings.HasPrefix(suffixValue, "{^") {
 				return false
 			}
