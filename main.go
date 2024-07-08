@@ -284,7 +284,8 @@ func main() {
 			for i, stroke := range strokes {
 				startsWithVowel := strings.HasPrefix(stroke, "A") || strings.HasPrefix(stroke, "E") ||
 					strings.HasPrefix(stroke, "O") || strings.HasPrefix(stroke, "U")
-				if startsWithVowel {
+				// only replace second stroke or later
+				if i > 0 && startsWithVowel {
 					kwrAddedStrokes[i] = "KWR" + kwrAddedStrokes[i]
 				}
 			}
