@@ -266,6 +266,32 @@ func main() {
 		}
 	}
 
+	// try to find words where we can add KWR in places we generated alternate splits
+	// in case KWR is being used for silent linker
+	// this comes about when we take a word like "synovia" which lapwing has as SEU/TPOEF/KWRA
+	// we move the TP over to the right hand to give SEUB/OEF/KWRA which is fine but we should also generate SEUB/KWROEF/KWRA
+	additionalEntryIndex = 0
+	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
+	for _, key := range sortedAdditionalEntryKeys {
+		additionalEntryIndex++
+		if additionalEntryIndex%1000 == 0 {
+			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (KWR addition)")
+		}
+		strokes := strings.Split(key, "/")
+		if len(strokes) >= 2 {
+			kwrAddedStrokes := make([]string, len(strokes))
+			copy(kwrAddedStrokes, strokes)
+			for i, stroke := range strokes {
+				startsWithVowel := strings.HasPrefix(stroke, "A") || strings.HasPrefix(stroke, "E") ||
+					strings.HasPrefix(stroke, "O") || strings.HasPrefix(stroke, "U")
+				if startsWithVowel {
+					kwrAddedStrokes[i] = "KWR" + kwrAddedStrokes[i]
+				}
+			}
+			addEntryIfNotPresent(strings.Join(kwrAddedStrokes, "/"), additionalEntries[key], &originalDictionary, &additionalEntries)
+		}
+	}
+
 	// do a final check of additional entries for valid word boundaries due to weird issues with order of addition
 	additionalEntryIndex = 0
 	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
