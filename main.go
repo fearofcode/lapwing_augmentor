@@ -85,8 +85,8 @@ func main() {
 	logger.Println("Done reading in dictionary(s). Combined size:", len(originalDictionary))
 
 	additionalEntries := make(map[string]string)
-	kwrSuffixEndPattern := `^.*/KWR([^/]+)$`
-	kwrSuffixEndRegex := regexp.MustCompile(kwrSuffixEndPattern)
+	kwrSuffixPattern := `^.*/KWR([^/]+)$`
+	kwrSuffixRegex := regexp.MustCompile(kwrSuffixPattern)
 	suffixReplacements := make(map[string][]string)
 	directReplacementSuffixPairs := []string{
 		"H",
@@ -137,6 +137,7 @@ func main() {
 	stringReplacements["D/KWR"] = []string{"/TK"}      // D
 	stringReplacements["G/KWR"] = []string{"/TPKW"}    // G
 	stringReplacements["PBLG/KWR"] = []string{"/PBLG"} // J
+	stringReplacements["BG/KWR"] = []string{"/K"}      // K
 	stringReplacements["L/KWR"] = []string{"/PBLG"}    // L
 	stringReplacements["PL/KWR"] = []string{"/PH"}     // M
 	stringReplacements["PB/KWR"] = []string{"/TPH"}    // N
@@ -196,7 +197,7 @@ func main() {
 			keyStrokes := strings.Split(newKey, "/")
 			generateSZVariationForKey(newKey, keyStrokes, vowelDashRegex, rightHandAfterS, value, originalDictionary, additionalEntries)
 		}
-		kwrMatch := kwrSuffixEndRegex.FindStringSubmatch(key)
+		kwrMatch := kwrSuffixRegex.FindStringSubmatch(key)
 		if kwrMatch != nil {
 			kwrSuffix := kwrMatch[1]
 			kwrPrefix := strings.TrimSuffix(key, kwrSuffix)
