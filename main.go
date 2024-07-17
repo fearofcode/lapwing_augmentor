@@ -224,12 +224,6 @@ func main() {
 				addEntryIfNotPresent(keyVariation2, value, &originalDictionary, &additionalEntries, prefixTree)
 			}
 		}
-
-		// see if we can generate asterisk-removed variations
-		asteriskRemovedCombinations := generateAsteriskRemovedCombinations(key)
-		for _, combination := range asteriskRemovedCombinations {
-			addEntryIfNotPresent(combination, value, &originalDictionary, &additionalEntries, prefixTree)
-		}
 	}
 
 	additionalEntryIndex := 0
@@ -247,11 +241,6 @@ func main() {
 					addEntryIfNotPresent(strings.Join(variation, "/"), value, &originalDictionary, &additionalEntries, prefixTree)
 				}
 			}
-		}
-		// see if we can generate asterisk-removed variations of generated additional entries
-		asteriskRemovedCombinations := generateAsteriskRemovedCombinations(key)
-		for _, combination := range asteriskRemovedCombinations {
-			addEntryIfNotPresent(combination, value, &originalDictionary, &additionalEntries, prefixTree)
 		}
 		// see if we can generate suffix variations of generated additional entries
 		addSuffixReplacements(suffixReplacementKeys, suffixReplacements, key, value, &originalDictionary, &additionalEntries, prefixTree)
@@ -365,49 +354,6 @@ func addStringReplacements(replacementKeys []string, replacements map[string][]s
 			}
 		}
 	}
-}
-
-func generateAsteriskRemovedCombinations(input string) []string {
-	// ignore input of length <= 2, prefixes, or commands
-	if len(input) <= 2 || strings.HasPrefix(input, "{") || strings.HasPrefix(input, "=") {
-		return []string{}
-	}
-	var result []string
-
-	var generate func(current []rune, index int)
-	generate = func(current []rune, index int) {
-		if index == len(current) {
-			result = append(result, strings.ReplaceAll(string(current), " ", ""))
-			return
-		}
-
-		if current[index] == '*' {
-			// replace '*' with ' '
-			current[index] = ' '
-			generate(current, index+1)
-
-			// replace '*' with '*'
-			current[index] = '*'
-		}
-
-		generate(current, index+1)
-	}
-
-	generate([]rune(input), 0)
-
-	// Filter out values of result that are equal to input
-	filteredResult := make([]string, 0, len(result))
-	for _, combination := range result {
-		// remove double slash in case a stroke was only *
-		combination = strings.ReplaceAll(combination, "//", "/")
-		if len(combination) > 0 && combination != input {
-			filteredResult = append(filteredResult, combination)
-		}
-		filteredResult = removeEmpty(filteredResult)
-	}
-	// sort filteredResult for deterministic output
-	sort.Strings(filteredResult)
-	return filteredResult
 }
 
 func generateSZVariationForKey(key string, strokes []string, vowelDashRegex *regexp.Regexp, rightHandAfterS *regexp.Regexp,
