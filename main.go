@@ -88,7 +88,7 @@ func main() {
 
 	logger.Println("Populating prefix tree")
 
-	for key, _ := range originalDictionary {
+	for key := range originalDictionary {
 		prefixTree.Insert(strings.Split(key, "/"))
 	}
 
@@ -125,17 +125,17 @@ func main() {
 	for _, suffix := range directReplacementSuffixPairs {
 		suffixReplacements["/"+suffix+"EU"] = []string{"/" + suffix + "AOE", "/" + suffix + "AE"}
 	}
-	suffixReplacements["/-B/KWREU"] = []string{"/PWEU", "/PWAOE", "/PWAE"}
-	suffixReplacements["/-BL/KWREU"] = []string{"/PWHREU", "/PWHRAOE", "/PWHRAE"}
-	suffixReplacements["/-FL/KWREU"] = []string{"/TPHREU", "/TPHRAOE", "/TPHRAE"}
-	suffixReplacements["/-L/KWREU"] = []string{"/HREU", "/HRAOE", "/HRAE"}
-	suffixReplacements["/-P/KWREU"] = []string{"/PEU", "/PAOE", "/PAE"}
-	suffixReplacements["/-PL/KWREU"] = []string{"/PHREU", "/PHRAOE", "/PHRAE"}
-	suffixReplacements["R/KWREU"] = []string{"/REU", "/RAOE", "/RAE"}
-	suffixReplacements["PB/KWREU"] = []string{"/TPHEU", "/TPHAOE", "/TPHAE"}
-	suffixReplacements["PL/KWREU"] = []string{"/PHEU", "/PHAOE", "/PHAE"}
-	suffixReplacements["F/KWREU"] = []string{"/TPEU", "/TPOE", "/TPAE"}
-	suffixReplacements["BG/KWREU"] = []string{"/KEU", "/KOE", "/KAE"}
+	suffixReplacements["/-B/KWREU"] = []string{"/PWEU"}
+	suffixReplacements["/-BL/KWREU"] = []string{"/PWHREU"}
+	suffixReplacements["/-FL/KWREU"] = []string{"/TPHREU"}
+	suffixReplacements["/-L/KWREU"] = []string{"/HREU"}
+	suffixReplacements["/-P/KWREU"] = []string{"/PEU"}
+	suffixReplacements["/-PL/KWREU"] = []string{"/PHREU"}
+	suffixReplacements["R/KWREU"] = []string{"/REU"}
+	suffixReplacements["PB/KWREU"] = []string{"/TPHEU"}
+	suffixReplacements["PL/KWREU"] = []string{"/PHEU"}
+	suffixReplacements["F/KWREU"] = []string{"/TPEU"}
+	suffixReplacements["BG/KWREU"] = []string{"/KEU"}
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
 	stringReplacements["/-B/KWR"] = []string{"/PW"}
@@ -368,7 +368,8 @@ func addStringReplacements(replacementKeys []string, replacements map[string][]s
 }
 
 func generateAsteriskRemovedCombinations(input string) []string {
-	if len(input) <= 2 {
+	// ignore input of length <= 2, prefixes, or commands
+	if len(input) <= 2 || strings.HasPrefix(input, "{") || strings.HasPrefix(input, "=") {
 		return []string{}
 	}
 	var result []string

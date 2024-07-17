@@ -7,7 +7,6 @@ This has not been thoroughly checked yet.
 
 Current additions:
 
-- for outlines ending with `/KWREU`, add `/KWRAE` and `/KWRAOE` variants. Rationale: `/KWREU` seemed odd and I would have expected it to be `/KWRAOE`. Normally this doesn't conflict except in cases like `trustee` vs. `trusty`. Phoenix theory apparently uses `AE` so I wanted to add that as an option.
 - fold some `/-<letter>/KWREU` outlines into a single stroke: `/-B/KWREU` -> `/PWEU`, `/PWAE`, `/PWAOE`. Rationale: this safely reduces strokes and seems intuitive. Also, `R/KWREU` gets replaced with `/REU`, `/RAE`, and `/RAOE`. The rationale is that this seems more consistent with the Lapwing splitting rules of having a consonant at the beginning of the stroke, effectively ignoring cases where r is treated by the base dictionary as a vowel. This effectively nullifies https://lapwing.aerick.ca/Chapter-15.html#kwr-with-the--r-key .
 - initial experimentation in generating alternate splits, e.g. finding other valid ways to split words like "distribute". this code adds `"TKEU/STREU/PWAOUT"` to compliment Lapwing's `"TKEUS/TREU/PWAOUT`. this is still in progress and there are probably a lot of invalid strokes.
 - remove KWR in outlines where it should be safe and not create word boundary ambiguity
