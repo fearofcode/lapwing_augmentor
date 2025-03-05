@@ -21,7 +21,7 @@ Usage:
 $ lapwing_augmentor --lapwing_source <source-dict> [--lapwing_source <source-dict2> ...] --output_target <target-dict> [--output_target <target-dict2> ...] 
 ```
 
-The code will read in every pat passed with the `--lapwing_source` parameter, so you can give it multiple paths if e.g. you want it to process both Lapwing and your own personal dictionaries:
+The code will read in every path passed with the `--lapwing_source` parameter, so you can give it multiple paths if e.g. you want it to process both Lapwing and your own personal dictionaries:
 
 ```
 ./lapwing_augmentor --lapwing_source ../aerick-steno-dictionaries/lapwing-base.json --lapwing_source ../steno-dictionaries/lapwing-additions.json --output_target ../steno-dictionaries/lapwing-augmentations.json

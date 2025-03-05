@@ -156,6 +156,8 @@ func main() {
 	stringReplacements["S/KWR"] = []string{"/S"}       // S
 	stringReplacements["T/KWR"] = []string{"/T"}       // T
 	stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
+	stringReplacements["STKPW"] = []string{"Z"}        // Z
+	stringReplacements["SR"] = []string{"V"}           // Z
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
 	vowelsDashes := `[AEOU\-*]+`
@@ -298,7 +300,7 @@ func main() {
 	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
 	for _, key := range sortedAdditionalEntryKeys {
 		additionalEntryIndex++
-		if additionalEntryIndex%1000 == 0 {
+		if additionalEntryIndex%10000 == 0 {
 			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries for final conflicting word boundaries")
 		}
 		strokes := strings.Split(key, "/")
@@ -892,7 +894,7 @@ type StenoParts struct {
 }
 
 func separateStrokeParts(stroke string) StenoParts {
-	left := "STKPWHR"
+	left := "ZSTKPWHRV"
 	vowels := "AO*EU"
 	right := "FRPBLGTSDZ"
 
@@ -962,7 +964,7 @@ func isValidStenoOrder(stroke string) bool {
 		return false
 	}
 
-	return isValidOrder(parts.Left, "STKPWHR") &&
+	return isValidOrder(parts.Left, "ZSTKPWHRV") &&
 		isValidOrder(parts.Vowels, "AO*EU") &&
 		isValidOrder(parts.Right, "FRPBLGTSDZ")
 }
