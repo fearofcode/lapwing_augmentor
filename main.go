@@ -136,6 +136,7 @@ func main() {
 	suffixReplacements["PL/KWREU"] = []string{"/PHEU"}
 	suffixReplacements["F/KWREU"] = []string{"/TPEU"}
 	suffixReplacements["BG/KWREU"] = []string{"/KEU"}
+	suffixReplacements["S"] = []string{"Z"}
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
 	stringReplacements["/-B/KWR"] = []string{"/PW"}
