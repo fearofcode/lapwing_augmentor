@@ -137,6 +137,7 @@ func main() {
 	suffixReplacements["F/KWREU"] = []string{"/TPEU"}
 	suffixReplacements["BG/KWREU"] = []string{"/KEU"}
 	suffixReplacements["S"] = []string{"Z"}
+	suffixReplacements["A/"] = []string{"S/"} // allow pressing QWERTY A key
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
 	stringReplacements["/-B/KWR"] = []string{"/PW"}
@@ -159,6 +160,8 @@ func main() {
 	stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
 	stringReplacements["STKPW"] = []string{"Z"}        // Z
 	stringReplacements["SR"] = []string{"V"}           // Z
+	stringReplacements["AO"] = []string{"AOU", "U"}
+	stringReplacements["AU"] = []string{"O"}
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
 	vowelsDashes := `[AEOU\-*]+`
