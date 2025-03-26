@@ -162,6 +162,8 @@ func main() {
 	stringReplacements["SR"] = []string{"V"}           // Z
 	stringReplacements["AO"] = []string{"AOU", "U"}
 	stringReplacements["AU"] = []string{"O"}
+	stringReplacements["AOEU"] = []string{"EU"}
+
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
 	vowelsDashes := `[AEOU\-*]+`
