@@ -163,6 +163,8 @@ func main() {
 	stringReplacements["AO"] = []string{"AOU", "U"}
 	stringReplacements["AU"] = []string{"O"}
 	stringReplacements["AOEU"] = []string{"EU"}
+	stringReplacements["A"] = []string{"AEU"}
+	stringReplacements["AEU"] = []string{"A"}
 
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
