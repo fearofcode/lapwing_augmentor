@@ -137,7 +137,7 @@ func main() {
 	suffixReplacements["F/KWREU"] = []string{"/TPEU"}
 	suffixReplacements["BG/KWREU"] = []string{"/KEU"}
 	suffixReplacements["S"] = []string{"Z"}
-	suffixReplacements["A/"] = []string{"S/"} // allow pressing QWERTY A key
+
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
 	stringReplacements["/-B/KWR"] = []string{"/PW"}
@@ -160,16 +160,44 @@ func main() {
 	stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
 	stringReplacements["STKPW"] = []string{"Z"}        // Z
 	stringReplacements["SR"] = []string{"V"}           // Z
-	stringReplacements["AO"] = []string{"AOU", "U"}
-	stringReplacements["AU"] = []string{"O"}
-	stringReplacements["AOEU"] = []string{"EU"}
-	stringReplacements["A"] = []string{"AEU"}
-	stringReplacements["AEU"] = []string{"A"}
+
 	stringReplacements["*AFRB"] = []string{"AFRB"}
 	stringReplacements["*EFRB"] = []string{"EFRB"}
 	stringReplacements["*IFRB"] = []string{"IFRB"}
 	stringReplacements["*OFRB"] = []string{"OFRB"}
 	stringReplacements["*UFRB"] = []string{"UFRB"}
+
+	stringReplacements["A*"] = []string{"A*EU", ""}      // ae tensing
+	stringReplacements["A*/"] = []string{"A*EU", ""}     // ae tensing
+	stringReplacements["*"] = []string{""}               // warlock: WAR/HRO*BG -> WAR/HROBG
+	stringReplacements["A"] = []string{"S/", "", "AEU"}  // allow pressing QWERTY A key. also omit vowel (A/SHURLD -> SHURLD)
+	stringReplacements["A/"] = []string{"S/", "", "AEU"} // allow pressing QWERTY A key. also omit vowel (A/SHURLD -> SHURLD)
+	stringReplacements["O"] = []string{""}               // vowel omission
+	stringReplacements["O/"] = []string{""}              // vowel omission
+	stringReplacements["AO"] = []string{"AOU", "U", ""}
+	stringReplacements["AO/"] = []string{"AOU", "U", ""}
+	stringReplacements["E"] = []string{"EU", ""}     // vowel omission, TPHO/HREPBLG -> TPHO/HREUPBLG
+	stringReplacements["E/"] = []string{""}          // vowel omission
+	stringReplacements["EU"] = []string{"", "E"}     // vowel omission
+	stringReplacements["EU/"] = []string{""}         // vowel omission
+	stringReplacements["U"] = []string{""}           // vowel omission
+	stringReplacements["U/"] = []string{""}          // vowel omission
+	stringReplacements["AE"] = []string{""}          // vowel omission
+	stringReplacements["AE/"] = []string{""}         // vowel omission
+	stringReplacements["OE"] = []string{"", "O"}     // vowel omission
+	stringReplacements["OE/"] = []string{"", "O"}    // vowel omission
+	stringReplacements["OU"] = []string{""}          // vowel omission
+	stringReplacements["OU/"] = []string{""}         // vowel omission
+	stringReplacements["AOU"] = []string{""}         // vowel omission
+	stringReplacements["AOU/"] = []string{""}        // vowel omission
+	stringReplacements["AOE"] = []string{""}         // vowel omission
+	stringReplacements["AOE/"] = []string{""}        // vowel omission
+	stringReplacements["AU"] = []string{"", "O"}     // vowel omission
+	stringReplacements["AU/"] = []string{"", "O"}    // vowel omission
+	stringReplacements["AEU"] = []string{"A", ""}    // vowel omission
+	stringReplacements["AEU/"] = []string{"A", ""}   // vowel omission
+	stringReplacements["AOEU"] = []string{"EU", ""}  // vowel omission
+	stringReplacements["AOEU/"] = []string{"EU", ""} // vowel omission
 
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
@@ -191,6 +219,16 @@ func main() {
 				properNameStrokeLengthLimit, " strokes and probably has no strokes worth generating")
 			continue
 		}
+
+		// generate version where 'value' has any of 'AEOU' replaced with ''
+		vowelsRemoved := strings.ReplaceAll(value, "A", "")
+		vowelsRemoved = strings.ReplaceAll(vowelsRemoved, "E", "")
+		vowelsRemoved = strings.ReplaceAll(vowelsRemoved, "O", "")
+		vowelsRemoved = strings.ReplaceAll(vowelsRemoved, "U", "")
+		if len(vowelsRemoved) > 0 {
+			addEntryIfNotPresent(key, vowelsRemoved, &originalDictionary, &additionalEntries, prefixTree)
+		}
+
 		if len(strokes) >= 2 {
 			alternateStrokes := generateAlternateSyllableSplitStrokes(strokes, &originalDictionary, &additionalEntries, prefixTree)
 			for _, strokeSet := range alternateStrokes {
@@ -794,6 +832,12 @@ func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary 
 func validWordBoundaries(strokeSet []string, originalDictionary *map[string]string, additionalEntries *map[string]string, prefixTree *PrefixTree) bool {
 	if len(strokeSet) < 2 {
 		return true
+	}
+
+	for _, stroke := range strokeSet {
+		if len(stroke) == 0 {
+			return false
+		}
 	}
 
 	// check from right to left
