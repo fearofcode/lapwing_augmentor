@@ -167,37 +167,11 @@ func main() {
 	stringReplacements["*OFRB"] = []string{"OFRB"}
 	stringReplacements["*UFRB"] = []string{"UFRB"}
 
-	stringReplacements["A*"] = []string{"A*EU", ""}      // ae tensing
-	stringReplacements["A*/"] = []string{"A*EU", ""}     // ae tensing
-	stringReplacements["*"] = []string{""}               // warlock: WAR/HRO*BG -> WAR/HROBG
-	stringReplacements["A"] = []string{"S/", "", "AEU"}  // allow pressing QWERTY A key. also omit vowel (A/SHURLD -> SHURLD)
-	stringReplacements["A/"] = []string{"S/", "", "AEU"} // allow pressing QWERTY A key. also omit vowel (A/SHURLD -> SHURLD)
-	stringReplacements["O"] = []string{""}               // vowel omission
-	stringReplacements["O/"] = []string{""}              // vowel omission
-	stringReplacements["AO"] = []string{"AOU", "U", ""}
-	stringReplacements["AO/"] = []string{"AOU", "U", ""}
-	stringReplacements["E"] = []string{"EU", ""}     // vowel omission, TPHO/HREPBLG -> TPHO/HREUPBLG
-	stringReplacements["E/"] = []string{""}          // vowel omission
-	stringReplacements["EU"] = []string{"", "E"}     // vowel omission
-	stringReplacements["EU/"] = []string{""}         // vowel omission
-	stringReplacements["U"] = []string{""}           // vowel omission
-	stringReplacements["U/"] = []string{""}          // vowel omission
-	stringReplacements["AE"] = []string{""}          // vowel omission
-	stringReplacements["AE/"] = []string{""}         // vowel omission
-	stringReplacements["OE"] = []string{"", "O"}     // vowel omission
-	stringReplacements["OE/"] = []string{"", "O"}    // vowel omission
-	stringReplacements["OU"] = []string{""}          // vowel omission
-	stringReplacements["OU/"] = []string{""}         // vowel omission
-	stringReplacements["AOU"] = []string{""}         // vowel omission
-	stringReplacements["AOU/"] = []string{""}        // vowel omission
-	stringReplacements["AOE"] = []string{""}         // vowel omission
-	stringReplacements["AOE/"] = []string{""}        // vowel omission
-	stringReplacements["AU"] = []string{"", "O"}     // vowel omission
-	stringReplacements["AU/"] = []string{"", "O"}    // vowel omission
-	stringReplacements["AEU"] = []string{"A", ""}    // vowel omission
-	stringReplacements["AEU/"] = []string{"A", ""}   // vowel omission
-	stringReplacements["AOEU"] = []string{"EU", ""}  // vowel omission
-	stringReplacements["AOEU/"] = []string{"EU", ""} // vowel omission
+	stringReplacements["A*"] = []string{"A*EU"} // ae tensing
+	stringReplacements["A"] = []string{"AEU"}
+	stringReplacements["AO"] = []string{"AOU"}
+	stringReplacements["E"] = []string{"EU"}    // vowel omission, TPHO/HREPBLG -> TPHO/HREUPBLG
+	stringReplacements["AOEU"] = []string{"EU"} // vowel omission
 
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
@@ -218,15 +192,6 @@ func main() {
 			logger.Println("Skipping key", key, "value = ", value, "since it looks to be a proper name with > ",
 				properNameStrokeLengthLimit, " strokes and probably has no strokes worth generating")
 			continue
-		}
-
-		// generate version where 'value' has any of 'AEOU' replaced with ''
-		vowelsRemoved := strings.ReplaceAll(value, "A", "")
-		vowelsRemoved = strings.ReplaceAll(vowelsRemoved, "E", "")
-		vowelsRemoved = strings.ReplaceAll(vowelsRemoved, "O", "")
-		vowelsRemoved = strings.ReplaceAll(vowelsRemoved, "U", "")
-		if len(vowelsRemoved) > 0 {
-			addEntryIfNotPresent(key, vowelsRemoved, &originalDictionary, &additionalEntries, prefixTree)
 		}
 
 		if len(strokes) >= 2 {
