@@ -320,6 +320,39 @@ func main() {
 		}
 	}
 
+	// try to find multi stroke entries we can partially brief by omitting partial strokes
+	additionalEntryIndex = 0
+	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
+	for _, key := range sortedAdditionalEntryKeys {
+		additionalEntryIndex++
+		if additionalEntryIndex%1000 == 0 {
+			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (stroke removal)")
+		}
+		strokes := strings.Split(key, "/")
+		if len(strokes) > 2 {
+			strokeIndexesToTry := []int{2, 3, 4}
+			for _, strokeIndexStart := range strokeIndexesToTry {
+				if strokeIndexStart >= len(strokes) {
+					continue
+				}
+				for _, strokeIndexEnd := range strokeIndexesToTry {
+					if strokeIndexEnd < strokeIndexStart || strokeIndexEnd >= len(strokes) {
+						continue
+					}
+
+					strokeOmitted := make([]string, len(strokes))
+					copy(strokeOmitted, strokes)
+
+					// remove strokeIndexStart to strokeIndexEnd
+					strokeOmitted = slices.Delete(strokeOmitted, strokeIndexStart, strokeIndexEnd+1)
+
+					addEntryIfNotPresent(strings.Join(strokeOmitted, "/"), additionalEntries[key], &originalDictionary, &additionalEntries, prefixTree)
+				}
+
+			}
+		}
+	}
+
 	// do a final check of additional entries for valid word boundaries due to weird issues with order of addition
 	additionalEntryIndex = 0
 	sortedAdditionalEntryKeys = sortedMapKeys(&additionalEntries)
