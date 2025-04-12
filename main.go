@@ -11,10 +11,11 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
-	properNameStrokeLengthLimit = 8
+	properNameStrokeLengthLimit = 6
 )
 
 func sortedMapKeys[V string | []string](dict *map[string]V) []string {
@@ -66,6 +67,7 @@ func main() {
 	originalDictionary := make(map[string]string)
 
 	for _, sourceDictPath := range sourceDictPaths {
+		logger.Println("Reading in dictionary from ", sourceDictPath)
 		sourceContents, err := os.ReadFile(sourceDictPath)
 		if err != nil {
 			fmt.Println("Error reading source dictionary:", err)
@@ -137,10 +139,12 @@ func main() {
 	suffixReplacements["F/KWREU"] = []string{"/TPEU"}
 	suffixReplacements["BG/KWREU"] = []string{"/KEU"}
 	suffixReplacements["S"] = []string{"Z"}
+	suffixReplacements["RBL"] = []string{"RB"}
 
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
 	stringReplacements["/-B/KWR"] = []string{"/PW"}
+	stringReplacements["R/BGS"] = []string{"RBGS"}
 	stringReplacements["/-BL/KWR"] = []string{"/PWHR"}
 	stringReplacements["/-FL/KWR"] = []string{"/TPHR"}
 	stringReplacements["/-L/KWR"] = []string{"/HR"}
@@ -160,6 +164,7 @@ func main() {
 	stringReplacements["Z/KWR"] = []string{"/STKPW"}   // Z
 	stringReplacements["STKPW"] = []string{"Z"}        // Z
 	stringReplacements["SR"] = []string{"V"}           // Z
+	stringReplacements["KHUR"] = []string{"TUR"}       // STRUBG / TUR
 
 	stringReplacements["*AFRB"] = []string{"AFRB"}
 	stringReplacements["*EFRB"] = []string{"EFRB"}
@@ -167,10 +172,7 @@ func main() {
 	stringReplacements["*OFRB"] = []string{"OFRB"}
 	stringReplacements["*UFRB"] = []string{"UFRB"}
 
-	stringReplacements["A*"] = []string{"A*EU"} // ae tensing
-	stringReplacements["A"] = []string{"AEU"}
 	stringReplacements["AO"] = []string{"AOU"}
-	stringReplacements["E"] = []string{"EU"}    // vowel omission, TPHO/HREPBLG -> TPHO/HREUPBLG
 	stringReplacements["AOEU"] = []string{"EU"} // vowel omission
 
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
@@ -180,11 +182,18 @@ func main() {
 	rightHandAfterS := regexp.MustCompile(`[DZ]`)
 	originalDictionaryIndex := 0
 	sortedOriginalDictionaryKeys := sortedMapKeys(&originalDictionary)
+	lastLogStatement := time.Now()
 	for _, key := range sortedOriginalDictionaryKeys {
+		if time.Since(lastLogStatement) > 30*time.Second {
+			logger.Println("More than 30 seconds since last log statement, exiting")
+			break
+		}
+
 		value := originalDictionary[key]
 		originalDictionaryIndex++
 		if originalDictionaryIndex%10000 == 0 {
 			logger.Println("Processed", originalDictionaryIndex, "/", len(originalDictionary), "entries")
+			lastLogStatement = time.Now()
 		}
 
 		strokes := strings.Split(key, "/")
