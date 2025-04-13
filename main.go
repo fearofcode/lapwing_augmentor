@@ -139,10 +139,17 @@ func main() {
 	suffixReplacements["F/KWREU"] = []string{"/TPEU"}
 	suffixReplacements["BG/KWREU"] = []string{"/KEU"}
 	suffixReplacements["S"] = []string{"Z"}
+	suffixReplacements["Z"] = []string{"S"}
+	suffixReplacements["-G"] = []string{"G"}
+	suffixReplacements["G"] = []string{"-G"}
 	suffixReplacements["RBL"] = []string{"RB"}
 
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
+	vowels := []string{"A", "E", "AOE", "AOEU", "OU", "U", "EU", "AEU", "AE", "OEU", "AOU"}
+	for _, vowel := range vowels {
+		stringReplacements["/"+vowel+"/"] = []string{"/KWR" + vowel + "/"}
+	}
 	stringReplacements["/-B/KWR"] = []string{"/PW"}
 	stringReplacements["R/BGS"] = []string{"RBGS"}
 	stringReplacements["/-BL/KWR"] = []string{"/PWHR"}
@@ -174,6 +181,7 @@ func main() {
 
 	stringReplacements["AO"] = []string{"AOU"}
 	stringReplacements["AOEU"] = []string{"EU"} // vowel omission
+	stringReplacements["EU"] = []string{"AOE"}  // vowel omission
 
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
@@ -197,6 +205,20 @@ func main() {
 		}
 
 		strokes := strings.Split(key, "/")
+		if len(strokes) > 3 {
+			for strokeIndexStart := 1; strokeIndexStart < len(strokes)-2; strokeIndexStart++ {
+				for strokeIndexEnd := strokeIndexStart; strokeIndexEnd < len(strokes)-2; strokeIndexEnd++ {
+					strokeOmitted := make([]string, len(strokes))
+					copy(strokeOmitted, strokes)
+
+					// remove strokeIndexStart to strokeIndexEnd
+					strokeOmitted = slices.Delete(strokeOmitted, strokeIndexStart, strokeIndexEnd+1)
+
+					addEntryIfNotPresent(strings.Join(strokeOmitted, "/"), value, &originalDictionary, &additionalEntries, prefixTree)
+				}
+
+			}
+		}
 		if len(strokes) > properNameStrokeLengthLimit && value[0] >= 'A' && value[0] <= 'Z' {
 			logger.Println("Skipping key", key, "value = ", value, "since it looks to be a proper name with > ",
 				properNameStrokeLengthLimit, " strokes and probably has no strokes worth generating")
@@ -329,17 +351,9 @@ func main() {
 			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (stroke removal)")
 		}
 		strokes := strings.Split(key, "/")
-		if len(strokes) > 2 {
-			strokeIndexesToTry := []int{2, 3, 4}
-			for _, strokeIndexStart := range strokeIndexesToTry {
-				if strokeIndexStart >= len(strokes) {
-					continue
-				}
-				for _, strokeIndexEnd := range strokeIndexesToTry {
-					if strokeIndexEnd < strokeIndexStart || strokeIndexEnd >= len(strokes) {
-						continue
-					}
-
+		if len(strokes) > 3 {
+			for strokeIndexStart := 1; strokeIndexStart < len(strokes)-2; strokeIndexStart++ {
+				for strokeIndexEnd := strokeIndexStart; strokeIndexEnd < len(strokes)-2; strokeIndexEnd++ {
 					strokeOmitted := make([]string, len(strokes))
 					copy(strokeOmitted, strokes)
 
