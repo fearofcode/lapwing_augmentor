@@ -143,6 +143,7 @@ func main() {
 	suffixReplacements["-G"] = []string{"G"}
 	suffixReplacements["G"] = []string{"-G"}
 	suffixReplacements["RBL"] = []string{"RB"}
+	suffixReplacements["/A"] = []string{"/A*"}
 
 	suffixReplacementKeys := sortedMapKeys(&suffixReplacements)
 	stringReplacements := make(map[string][]string)
@@ -218,8 +219,7 @@ func main() {
 		value := originalDictionary[key]
 
 		// ignore [foo|bar] entries
-		if strings.HasPrefix(key, "[") && strings.HasSuffix(key, "]") && strings.Contains(key, "|") {
-			logger.Println("Ignoring key", key, "value = ", value, "since it is for stupid proprietary steno software")
+		if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") && strings.Contains(value, "|") {
 			continue
 		}
 
