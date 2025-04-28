@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -47,6 +48,15 @@ func (s *stringList) Set(value string) error {
 	return nil
 }
 
+func CapitalizeFirstLetter(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	runes := []rune(s)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
+}
+
 func main() {
 
 	logger := log.New(os.Stdout, "LOG: ", log.LstdFlags|log.Lmicroseconds)
@@ -63,6 +73,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	// sourceDictPaths := []string{"../aerick-steno-dictionaries/lapwing-base.json"}
+	// targetDictPaths := []string{"lapwing-augmentations.json"}
 	logger.Println("Reading in dictionary from ", sourceDictPaths)
 	originalDictionary := make(map[string]string)
 
@@ -183,10 +195,12 @@ func main() {
 	stringReplacements["AO"] = []string{"AOU"}
 	stringReplacements["EU"] = []string{"AOE"} // vowel omission
 
+	stringReplacements["A/"] = []string{"A*/"}
 	stringReplacementKeys := sortedMapKeys(&stringReplacements)
 
 	prefixReplacements := make(map[string][]string)
-	prefixReplacements["A/"] = []string{"A*/"}
+	// need to do this on whole string
+	// prefixReplacements["A/"] = []string{"A*/"}
 	prefixReplacementKeys := sortedMapKeys(&prefixReplacements)
 
 	ignoredChordPatterns := map[string]bool{
@@ -242,6 +256,14 @@ func main() {
 
 			}
 		}
+
+		// generate proper name version of the entry by uppercasing the first letter and adding a pound sign
+		if !strings.HasPrefix(key, "#") && !strings.HasPrefix(value, "{") && !strings.HasPrefix(value, "=") {
+			upperCasedValue := CapitalizeFirstLetter(value)
+			keyWithPound := "#" + key
+			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
+
 		if len(strokes) > properNameStrokeLengthLimit && value[0] >= 'A' && value[0] <= 'Z' {
 			logger.Println("Skipping key", key, "value = ", value, "since it looks to be a proper name with > ",
 				properNameStrokeLengthLimit, " strokes and probably has no strokes worth generating")
@@ -305,6 +327,12 @@ func main() {
 		value := additionalEntries[key]
 		additionalEntryIndex++
 		strokes := strings.Split(key, "/")
+		// generate proper name version of the entry by uppercasing the first letter and adding a pound sign
+		if !strings.HasPrefix(key, "#") {
+			upperCasedValue := CapitalizeFirstLetter(value)
+			keyWithPound := "#" + key
+			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
 		if len(strokes) >= 2 {
 			// see if we can generate KWR removed variations on additional entries we just generated
 			if strings.Contains(key, "/KWR") {
@@ -330,6 +358,12 @@ func main() {
 		if additionalEntryIndex%1000 == 0 {
 			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (alternate splits)")
 		}
+		// generate proper name version of the entry by uppercasing the first letter and adding a pound sign
+		if !strings.HasPrefix(key, "#") {
+			upperCasedValue := CapitalizeFirstLetter(value)
+			keyWithPound := "#" + key
+			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			// now try generating alternate syllabic splits on previously added entries
@@ -351,6 +385,13 @@ func main() {
 		if additionalEntryIndex%1000 == 0 {
 			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (KWR addition)")
 		}
+		value := additionalEntries[key]
+		// generate proper name version of the entry by uppercasing the first letter and adding a pound sign
+		if !strings.HasPrefix(key, "#") {
+			upperCasedValue := CapitalizeFirstLetter(value)
+			keyWithPound := "#" + key
+			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
 			kwrAddedStrokes := make([]string, len(strokes))
@@ -363,7 +404,7 @@ func main() {
 					kwrAddedStrokes[i] = "KWR" + kwrAddedStrokes[i]
 				}
 			}
-			addEntryIfNotPresent(strings.Join(kwrAddedStrokes, "/"), additionalEntries[key], &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+			addEntryIfNotPresent(strings.Join(kwrAddedStrokes, "/"), value, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
 		}
 	}
 
@@ -425,9 +466,6 @@ func main() {
 
 func addPrefixReplacements(suffixReplacementKeys []string, prefixReplacements map[string][]string, key string, value string, originalDictionary *map[string]string,
 	additionalEntries *map[string]string, prefixTree *PrefixTree, ignoredChordPatterns *map[string]bool) {
-	if value == "alone" {
-		log.Println("pause")
-	}
 
 	for _, replacedSuffix := range suffixReplacementKeys {
 		replacements := prefixReplacements[replacedSuffix]
@@ -1023,7 +1061,7 @@ type StenoParts struct {
 }
 
 func separateStrokeParts(stroke string) StenoParts {
-	left := "ZSTKPWHRV"
+	left := "#ZSTKPWHRV"
 	vowels := "AO*EU"
 	right := "FRPBLGTSDZ"
 
@@ -1093,7 +1131,7 @@ func isValidStenoOrder(stroke string) bool {
 		return false
 	}
 
-	return isValidOrder(parts.Left, "ZSTKPWHRV") &&
+	return isValidOrder(parts.Left, "#ZSTKPWHRV") &&
 		isValidOrder(parts.Vowels, "AO*EU") &&
 		isValidOrder(parts.Right, "FRPBLGTSDZ")
 }
