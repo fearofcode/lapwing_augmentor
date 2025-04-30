@@ -264,6 +264,13 @@ func main() {
 			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
 		}
 
+		// now generate downcased versions of #-prefixed entries
+		if strings.HasPrefix(key, "#") && !strings.HasPrefix(value, "{") && !strings.HasPrefix(value, "=") {
+			downCasedValue := strings.ToLower(value)
+			keyWithoutPound := strings.TrimPrefix(key, "#")
+			addEntryIfNotPresent(keyWithoutPound, downCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
+
 		if len(strokes) > properNameStrokeLengthLimit && value[0] >= 'A' && value[0] <= 'Z' {
 			logger.Println("Skipping key", key, "value = ", value, "since it looks to be a proper name with > ",
 				properNameStrokeLengthLimit, " strokes and probably has no strokes worth generating")
@@ -333,6 +340,12 @@ func main() {
 			keyWithPound := "#" + key
 			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
 		}
+		// now generate downcased versions of #-prefixed entries
+		if strings.HasPrefix(key, "#") && !strings.HasPrefix(value, "{") && !strings.HasPrefix(value, "=") {
+			downCasedValue := strings.ToLower(value)
+			keyWithoutPound := strings.TrimPrefix(key, "#")
+			addEntryIfNotPresent(keyWithoutPound, downCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
 		if len(strokes) >= 2 {
 			// see if we can generate KWR removed variations on additional entries we just generated
 			if strings.Contains(key, "/KWR") {
@@ -355,14 +368,26 @@ func main() {
 	for _, key := range sortedAdditionalEntryKeys {
 		value := additionalEntries[key]
 		additionalEntryIndex++
+		if time.Since(lastLogStatement) > 30*time.Second {
+			logger.Println("More than 30 seconds since last log statement, exiting")
+			break
+		}
 		if additionalEntryIndex%1000 == 0 {
 			logger.Println("Processed", additionalEntryIndex, "/", len(sortedAdditionalEntryKeys), "additional entries (alternate splits)")
+			lastLogStatement = time.Now()
+
 		}
 		// generate proper name version of the entry by uppercasing the first letter and adding a pound sign
 		if !strings.HasPrefix(key, "#") {
 			upperCasedValue := CapitalizeFirstLetter(value)
 			keyWithPound := "#" + key
 			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
+		// now generate downcased versions of #-prefixed entries
+		if strings.HasPrefix(key, "#") && !strings.HasPrefix(value, "{") && !strings.HasPrefix(value, "=") {
+			downCasedValue := strings.ToLower(value)
+			keyWithoutPound := strings.TrimPrefix(key, "#")
+			addEntryIfNotPresent(keyWithoutPound, downCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
 		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
@@ -391,6 +416,12 @@ func main() {
 			upperCasedValue := CapitalizeFirstLetter(value)
 			keyWithPound := "#" + key
 			addEntryIfNotPresent(keyWithPound, upperCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
+		}
+		// now generate downcased versions of #-prefixed entries
+		if strings.HasPrefix(key, "#") && !strings.HasPrefix(value, "{") && !strings.HasPrefix(value, "=") {
+			downCasedValue := strings.ToLower(value)
+			keyWithoutPound := strings.TrimPrefix(key, "#")
+			addEntryIfNotPresent(keyWithoutPound, downCasedValue, &originalDictionary, &additionalEntries, prefixTree, &ignoredChordPatterns)
 		}
 		strokes := strings.Split(key, "/")
 		if len(strokes) >= 2 {
