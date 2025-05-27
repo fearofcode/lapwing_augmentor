@@ -960,6 +960,17 @@ func generateAlternateSyllableSplitStrokes(strokes []string, originalDictionary 
 	return alternateStrokes
 }
 
+func PrefixTreeHasPrefix(prefixTree *PrefixTree, strokes []string) bool {
+	if prefixTree.HasPrefix(strokes) {
+		return true
+	}
+	// make a deep copy of the strokes to check if "-" + strokes[0] is a prefix
+	strokesCopy := make([]string, len(strokes))
+	copy(strokesCopy, strokes)
+	strokesCopy[0] = "-" + strokesCopy[0]
+	return prefixTree.HasPrefix(strokesCopy)
+}
+
 func validWordBoundaries(strokeSet []string, originalDictionary *map[string]string, additionalEntries *map[string]string, prefixTree *PrefixTree, ignoredChordPatterns *map[string]bool) bool {
 	if len(strokeSet) < 2 {
 		return true
@@ -978,8 +989,8 @@ func validWordBoundaries(strokeSet []string, originalDictionary *map[string]stri
 		suffix := strings.Join(suffixStrokes, "/")
 		prefixStrokes := strokeSet[:splitPoint]
 		prefix := strings.Join(prefixStrokes, "/")
-		if (hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
-			(hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary) || prefixTree.HasPrefix(suffixStrokes)) {
+		if (hasKey("-"+prefix, additionalEntries) || hasKey("-"+prefix, originalDictionary) || hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
+			(hasKey("-"+suffix, additionalEntries) || hasKey("-"+suffix, originalDictionary) || hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary) || PrefixTreeHasPrefix(prefixTree, suffixStrokes)) {
 			_, ok1 := (*ignoredChordPatterns)[suffix]
 			_, ok2 := (*ignoredChordPatterns)[prefix]
 			if !ok1 && !ok2 {
@@ -1001,8 +1012,8 @@ func validWordBoundaries(strokeSet []string, originalDictionary *map[string]stri
 		prefix := strings.Join(prefixStrokes, "/")
 		suffixStrokes := strokeSet[splitPoint:]
 		suffix := strings.Join(suffixStrokes, "/")
-		if (hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
-			(hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary) || prefixTree.HasPrefix(suffixStrokes)) {
+		if (hasKey("-"+prefix, additionalEntries) || hasKey("-"+prefix, originalDictionary) || hasKey(prefix, additionalEntries) || hasKey(prefix, originalDictionary)) &&
+			(hasKey("-"+suffix, additionalEntries) || hasKey("-"+suffix, originalDictionary) || hasKey(suffix, additionalEntries) || hasKey(suffix, originalDictionary) || PrefixTreeHasPrefix(prefixTree, suffixStrokes)) {
 			_, ok1 := (*ignoredChordPatterns)[suffix]
 			_, ok2 := (*ignoredChordPatterns)[prefix]
 			if !ok1 && !ok2 {
