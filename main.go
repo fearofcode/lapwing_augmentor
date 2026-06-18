@@ -193,6 +193,7 @@ func main() {
 	stringReplacements["*UFRB"] = []string{"UFRB"}
 
 	stringReplacements["AO"] = []string{"AOU"}
+	stringReplacements["A*EU"] = []string{"AE"}
 	stringReplacements["EU"] = []string{"AOE"} // vowel omission
 
 	stringReplacements["A/"] = []string{"A*/"}
